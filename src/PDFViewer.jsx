@@ -20,6 +20,8 @@ import PageNumberingTool from './components/tools/PageNumberingTool';
 import PDFToImagesTool from './components/tools/PDFToImagesTool';
 import PDFSecurityModal from './components/tools/PDFSecurityModal';
 import SignatureModal from './components/SignatureModal';
+import { PDFDocument } from 'pdf-lib';
+import { downloadFile } from './utils/pdfEngine';
 
 pdfjs.GlobalWorkerOptions.workerSrc =
   `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
@@ -557,9 +559,55 @@ export default function PDFViewer({ file, theme = 'light', onToggleTheme, onClos
     window.print();
   }, []);
 
-  // Download PDF
-  const handleDownload = useCallback(() => {
+  // Download PDF (with embedded digital signatures if placed)
+  const handleDownload = useCallback(async () => {
     if (!file) return;
+
+    if (placedSignatures.length > 0) {
+      try {
+        const fileBuffer = await file.arrayBuffer();
+        const pdfDoc = await PDFDocument.load(fileBuffer, { ignoreEncryption: true });
+        const pages = pdfDoc.getPages();
+
+        for (const sig of placedSignatures) {
+          const targetPage = pages[sig.pageNumber - 1];
+          if (!targetPage) continue;
+
+          // Convert dataUrl to Uint8Array
+          const base64Data = sig.dataUrl.split(',')[1];
+          const binaryString = atob(base64Data);
+          const sigBytes = new Uint8Array(binaryString.length);
+          for (let i = 0; i < binaryString.length; i++) {
+            sigBytes[i] = binaryString.charCodeAt(i);
+          }
+
+          const embeddedSig = await pdfDoc.embedPng(sigBytes);
+          const { width: pageW, height: pageH } = targetPage.getSize();
+
+          const scaleRatio = pageW / (pageWidth || 600);
+          const sigW = 160 * scaleRatio;
+          const sigH = (160 * (embeddedSig.height / embeddedSig.width)) * scaleRatio;
+
+          const sigX = sig.x * scaleRatio;
+          // Invert Y axis for PDF coordinate system (origin bottom-left)
+          const sigY = pageH - (sig.y * scaleRatio) - sigH;
+
+          targetPage.drawImage(embeddedSig, {
+            x: Math.max(0, sigX),
+            y: Math.max(0, sigY),
+            width: sigW,
+            height: sigH,
+          });
+        }
+
+        const signedBytes = await pdfDoc.save();
+        downloadFile(signedBytes, `signed_${file.name || 'document.pdf'}`);
+        return;
+      } catch (err) {
+        console.error('Error baking digital signature into PDF:', err);
+      }
+    }
+
     const url = typeof file === 'string' ? file : URL.createObjectURL(file);
     const a = document.createElement('a');
     a.href = url;
@@ -570,7 +618,7 @@ export default function PDFViewer({ file, theme = 'light', onToggleTheme, onClos
     if (typeof file !== 'string') {
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     }
-  }, [file]);
+  }, [file, placedSignatures, pageWidth]);
 
   // Copy selected text
   const handleCopySelection = useCallback(() => {
