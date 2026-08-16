@@ -8,7 +8,9 @@ import {
   ZoomIn, ZoomOut, Search, LayoutList, X, ChevronUp, ChevronDown,
   RotateCw, Moon, Sun, Maximize, Minimize, Bookmark, Download,
   Printer, BookOpen, Copy, Check, Sparkles, Wand2, LayoutGrid,
-  Scissors, Stamp, Hash, FileImage, ShieldAlert, PenTool, CheckCircle
+  Scissors, Stamp, Hash, FileImage, ShieldAlert, PenTool, CheckCircle,
+  Undo2, Redo2, Pencil, MessageSquare, Square, Circle, ArrowUpRight,
+  Highlighter, Share2, Minimize2, Palette, Trash2, Edit3, Sliders, Type, CheckSquare
 } from 'lucide-react';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
@@ -19,8 +21,11 @@ import WatermarkTool from './components/tools/WatermarkTool';
 import PageNumberingTool from './components/tools/PageNumberingTool';
 import PDFToImagesTool from './components/tools/PDFToImagesTool';
 import PDFSecurityModal from './components/tools/PDFSecurityModal';
+import CompressPDFTool from './components/tools/CompressPDFTool';
+import SharePDFModal from './components/tools/SharePDFModal';
 import SignatureModal from './components/SignatureModal';
-import { PDFDocument } from 'pdf-lib';
+import PDFAnnotationOverlay from './components/PDFAnnotationOverlay';
+import { PDFDocument, rgb, degrees, StandardFonts } from 'pdf-lib';
 import { downloadFile } from './utils/pdfEngine';
 
 pdfjs.GlobalWorkerOptions.workerSrc =
@@ -98,41 +103,63 @@ const SidebarThumb = memo(function SidebarThumb({ num, rotation, isActive, onCli
         width: THUMB_WIDTH,
         height: Math.round(THUMB_WIDTH * DEFAULT_AR),
         boxShadow: '0 1px 6px rgba(0,0,0,0.12)',
-        borderRadius: 3,
+        borderRadius: 4,
         overflow: 'hidden',
-        lineHeight: 0,
-        background: 'var(--glass-border)',
+        background: '#ffffff',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
       }}>
-        {visible && (
+        {visible ? (
           <Page
             pageNumber={num}
-            rotate={rotation}
             width={THUMB_WIDTH}
+            rotate={rotation}
             renderTextLayer={false}
             renderAnnotationLayer={false}
+            loading={
+              <div style={{ width: THUMB_WIDTH, height: Math.round(THUMB_WIDTH * DEFAULT_AR), background: 'var(--glass-bg)' }} />
+            }
           />
+        ) : (
+          <div style={{ width: THUMB_WIDTH, height: Math.round(THUMB_WIDTH * DEFAULT_AR), background: 'var(--glass-bg)' }} />
         )}
       </div>
-      <span style={{
-        fontSize: 11,
-        color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
-        fontWeight: isActive ? 600 : 400,
-      }}>
+      <span style={{ fontSize: 11, color: isActive ? 'var(--accent)' : 'var(--text-secondary)', fontWeight: isActive ? 600 : 400 }}>
         {num}
       </span>
     </div>
   );
 });
 
-// ─── Virtual page slot ────────────────────────────────────────────────────────
+// ─── Virtual page with Annotations & Signatures ──────────────────────────────────────────
 const VirtualPage = memo(function VirtualPage({
-  pageNumber, scale, rotation, pageWidth, inRange, isDarkMode, searchQuery, activeMatch,
-  cachedHeight, onVisible, onMeasured, placedSignatures, onPageClick,
+  pageNumber,
+  scale,
+  rotation,
+  pageWidth,
+  isDarkMode,
+  searchQuery,
+  activeMatch,
+  placedSignatures,
+  annotations,
+  activeAnnotateTool,
+  annotateColor,
+  annotateStrokeWidth,
+  annotateOpacity,
+  onAddAnnotation,
+  onUpdateAnnotation,
+  onDeleteAnnotation,
+  onPageClick,
+  inRange,
+  cachedHeight,
+  onVisible,
+  onMeasured,
 }) {
-  const wrapRef  = useRef(null);
-  const measured = useRef(false);
+  const wrapRef   = useRef(null);
+  const measured  = useRef(false);
 
-  // Intersection Observer for current-page tracking
+  // IntersectionObserver to report current reading page
   useEffect(() => {
     const el = wrapRef.current;
     if (!el) return;
@@ -231,6 +258,22 @@ const VirtualPage = memo(function VirtualPage({
                 <img src={sig.dataUrl} alt="Signature" style={{ width: '100%', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.15))' }} />
               </div>
             ))}
+
+            {/* In-Viewer Annotation Overlay */}
+            <PDFAnnotationOverlay
+              pageNumber={pageNumber}
+              pageWidth={pageWidth}
+              pageHeight={placeholderH}
+              scale={scale}
+              activeTool={activeAnnotateTool}
+              strokeColor={annotateColor}
+              strokeWidth={annotateStrokeWidth}
+              opacity={annotateOpacity}
+              annotations={annotations}
+              onAddAnnotation={onAddAnnotation}
+              onUpdateAnnotation={onUpdateAnnotation}
+              onDeleteAnnotation={onDeleteAnnotation}
+            />
           </div>
           <div style={{ marginTop: 6, fontSize: 11, color: 'var(--text-secondary)' }}>
             {pageNumber}
@@ -251,9 +294,13 @@ const VirtualPage = memo(function VirtualPage({
 
 export default function PDFViewer({ file: initialFile, theme = 'light', onToggleTheme, onClose }) {
   const [file, setFile] = useState(initialFile);
+  const [customDocName, setCustomDocName] = useState(() => initialFile?.name || 'document.pdf');
+  const [isRenamingDoc, setIsRenamingDoc] = useState(false);
+  const renameInputRef = useRef(null);
 
   useEffect(() => {
     setFile(initialFile);
+    if (initialFile?.name) setCustomDocName(initialFile.name);
   }, [initialFile]);
 
   const [pdfDocument,    setPdfDocument]   = useState(null);
@@ -270,6 +317,18 @@ export default function PDFViewer({ file: initialFile, theme = 'light', onToggle
   const [activeViewerTool, setActiveViewerTool] = useState(null);
   const [pendingSignature, setPendingSignature] = useState(null);
   const [placedSignatures, setPlacedSignatures] = useState([]);
+
+  // Annotation Studio State
+  const [isAnnotateMode,     setIsAnnotateMode]     = useState(false);
+  const [activeAnnotateTool, setActiveAnnotateTool] = useState(null); // 'pen' | 'highlighter' | 'text' | 'comment' | 'rect' | 'circle' | 'arrow'
+  const [annotateColor,      setAnnotateColor]      = useState('#ff0055');
+  const [annotateStrokeWidth,setAnnotateStrokeWidth]= useState(3);
+  const [annotateOpacity,    setAnnotateOpacity]    = useState(1.0);
+  const [annotations,        setAnnotations]        = useState([]);
+
+  // Universal Undo / Redo History Stack
+  const [history, setHistory] = useState([]);
+  const [future,  setFuture]  = useState([]);
 
   // Search state
   const [searchQuery,      setSearchQuery]      = useState('');
@@ -299,6 +358,90 @@ export default function PDFViewer({ file: initialFile, theme = 'light', onToggle
 
   const [renderCenter, setRenderCenter] = useState(1);
 
+  // Focus rename input on rename mode
+  useEffect(() => {
+    if (isRenamingDoc && renameInputRef.current) {
+      renameInputRef.current.focus();
+      renameInputRef.current.select();
+    }
+  }, [isRenamingDoc]);
+
+  // Record history snapshot helper
+  const recordSnapshot = useCallback(() => {
+    setHistory(prev => [
+      ...prev.slice(-25), // keep up to 25 history states
+      {
+        file,
+        customDocName,
+        placedSignatures: [...placedSignatures],
+        annotations: [...annotations],
+        rotation,
+      }
+    ]);
+    setFuture([]); // clear redo stack on new action
+  }, [file, customDocName, placedSignatures, annotations, rotation]);
+
+  const handleUndo = useCallback(() => {
+    if (history.length === 0) return;
+    const lastState = history[history.length - 1];
+    setFuture(prev => [
+      {
+        file,
+        customDocName,
+        placedSignatures: [...placedSignatures],
+        annotations: [...annotations],
+        rotation,
+      },
+      ...prev
+    ]);
+    setHistory(prev => prev.slice(0, prev.length - 1));
+
+    // Restore state
+    setFile(lastState.file);
+    setCustomDocName(lastState.customDocName);
+    setPlacedSignatures(lastState.placedSignatures);
+    setAnnotations(lastState.annotations);
+    setRotation(lastState.rotation);
+  }, [history, file, customDocName, placedSignatures, annotations, rotation]);
+
+  const handleRedo = useCallback(() => {
+    if (future.length === 0) return;
+    const nextState = future[0];
+    setHistory(prev => [
+      ...prev,
+      {
+        file,
+        customDocName,
+        placedSignatures: [...placedSignatures],
+        annotations: [...annotations],
+        rotation,
+      }
+    ]);
+    setFuture(prev => prev.slice(1));
+
+    // Restore state
+    setFile(nextState.file);
+    setCustomDocName(nextState.customDocName);
+    setPlacedSignatures(nextState.placedSignatures);
+    setAnnotations(nextState.annotations);
+    setRotation(nextState.rotation);
+  }, [future, file, customDocName, placedSignatures, annotations, rotation]);
+
+  // Annotations management with history recording
+  const handleAddAnnotation = useCallback((newAnn) => {
+    recordSnapshot();
+    setAnnotations(prev => [...prev, newAnn]);
+  }, [recordSnapshot]);
+
+  const handleUpdateAnnotation = useCallback((id, patch) => {
+    setAnnotations(prev => prev.map(a => a.id === id ? { ...a, ...patch } : a));
+  }, []);
+
+  const handleDeleteAnnotation = useCallback((id) => {
+    recordSnapshot();
+    setAnnotations(prev => prev.filter(a => a.id !== id));
+  }, [recordSnapshot]);
+
   // Sync internal dark mode with app theme
   useEffect(() => {
     setIsDarkMode(theme === 'dark');
@@ -321,264 +464,300 @@ export default function PDFViewer({ file: initialFile, theme = 'light', onToggle
   useEffect(() => { numRef.current     = numPages;    }, [numPages]);
   useEffect(() => { scaleRef.current   = scale;       }, [scale]);
 
-  // Clear height cache on zoom or rotation change
-  useEffect(() => { heightCache.current = {}; }, [scale, rotation]);
-
-  // Fullscreen event listener
-  useEffect(() => {
-    const handleFullscreenChange = () => {
-      setIsFullscreen(Boolean(document.fullscreenElement));
-    };
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
-  }, []);
-
-  // Text selection listener for floating toolbar
-  useEffect(() => {
-    const handleSelection = () => {
-      const selection = window.getSelection();
-      if (!selection || selection.isCollapsed) {
-        setSelectionBox(null);
-        setSelectedText('');
-        return;
-      }
-      const text = selection.toString().trim();
-      if (!text) {
-        setSelectionBox(null);
-        setSelectedText('');
-        return;
-      }
-      try {
-        const range = selection.getRangeAt(0);
-        const rect = range.getBoundingClientRect();
-        if (rect && rect.width > 0 && rect.height > 0) {
-          setSelectionBox({
-            top: Math.max(70, rect.top - 44),
-            left: Math.max(20, rect.left + rect.width / 2 - 80),
-          });
-          setSelectedText(text);
-        }
-      } catch (e) {
-        setSelectionBox(null);
-      }
-    };
-
-    document.addEventListener('selectionchange', handleSelection);
-    return () => document.removeEventListener('selectionchange', handleSelection);
-  }, []);
-
-  // Container width tracking
+  // Measure main viewport width for responsive page sizing
   useEffect(() => {
     const el = mainRef.current;
     if (!el) return;
-    let raf;
     const ro = new ResizeObserver(([entry]) => {
-      cancelAnimationFrame(raf);
-      raf = requestAnimationFrame(() =>
-        setContainerWidth(entry.contentRect.width)
-      );
+      setContainerWidth(entry.contentRect.width);
     });
     ro.observe(el);
-    return () => { ro.disconnect(); cancelAnimationFrame(raf); };
+    return () => ro.disconnect();
   }, []);
 
+  // Compute responsive page width based on zoom & two-page spread
   const pageWidth = useMemo(() => {
-    if (containerWidth <= 0) return 700;
-    if (viewMode === 'two-page') {
-      return Math.min(650, Math.floor((containerWidth - 90) / 2));
-    }
-    return Math.min(880, containerWidth - 64);
-  }, [containerWidth, viewMode]);
+    if (!containerWidth) return 600;
+    const padding = 48;
+    const baseW = viewMode === 'two-page'
+      ? Math.max(280, (containerWidth - padding * 2 - 20) / 2)
+      : Math.max(320, containerWidth - padding * 2);
+    return Math.round(baseW * scale);
+  }, [containerWidth, scale, viewMode]);
 
-  // Document loaded callback
+  // Document load callbacks
   const onDocumentLoad = useCallback((pdf) => {
     setPdfDocument(pdf);
     setNumPages(pdf.numPages);
     setLoadError(null);
-    pageTextCache.current.clear();
   }, []);
 
   const onDocumentError = useCallback((err) => {
-    setLoadError(err.message || 'Failed to load PDF.');
+    console.error('PDF load error:', err);
+    setLoadError(err.message || 'Failed to load PDF document.');
   }, []);
 
-  // Page visibility from IntersectionObserver
-  const handleVisible = useCallback((pageNum) => {
-    currentRef.current = pageNum;
-    startTransition(() => {
-      setCurrentPage(pageNum);
-      setRenderCenter(pageNum);
-    });
-  }, []);
-
-  const handleMeasured = useCallback((pageNum, height) => {
-    heightCache.current[pageNum] = height;
-  }, []);
-
-  // Scroll to page
-  const scrollToPage = useCallback((raw) => {
-    const pg = Math.max(1, Math.min(raw, numRef.current || 1));
-    const el = document.getElementById(`page-${pg}`);
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      currentRef.current = pg;
-      startTransition(() => { setCurrentPage(pg); setRenderCenter(pg); });
+  // Window scroll navigation
+  const scrollToPage = useCallback((num) => {
+    if (!numPages) return;
+    const clamped = Math.max(1, Math.min(numPages, num));
+    const target = document.getElementById(`page-${clamped}`);
+    if (target && mainRef.current) {
+      mainRef.current.scrollTo({
+        top: target.offsetTop - 20,
+        behavior: 'smooth',
+      });
     }
-    requestAnimationFrame(() => {
-      const thumb = document.getElementById(`thumb-${pg}`);
-      if (thumb && sidebarRef.current && sidebarTab === 'thumbnails')
-        thumb.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-    });
-  }, [sidebarTab]);
+    setCurrentPage(clamped);
+    setRenderCenter(clamped);
+  }, [numPages]);
 
-  // ── Production-Grade Ultra Fast Full Document Search ───────────────────────
-  const performSearch = useCallback(async (query) => {
-    if (!query || !query.trim() || !pdfDocument) {
+  const handleVisible = useCallback((pageNumber) => {
+    setCurrentPage(pageNumber);
+    startTransition(() => {
+      setRenderCenter(pageNumber);
+    });
+  }, []);
+
+  const handleMeasured = useCallback((pageNumber, height) => {
+    heightCache.current[pageNumber] = height;
+  }, []);
+
+  // Pre-index text content for ultra-fast instant searching
+  useEffect(() => {
+    if (!pdfDocument || !numPages) return;
+    let isCancelled = false;
+
+    const indexAllPages = async () => {
+      for (let i = 1; i <= numPages; i++) {
+        if (isCancelled) break;
+        if (!pageTextCache.current.has(i)) {
+          try {
+            const page = await pdfDocument.getPage(i);
+            const textContent = await page.getTextContent();
+            const fullText = textContent.items.map(item => item.str).join(' ');
+            pageTextCache.current.set(i, fullText);
+          } catch (e) {
+            // Ignore page index errors
+          }
+        }
+      }
+    };
+
+    indexAllPages();
+    return () => { isCancelled = true; };
+  }, [pdfDocument, numPages]);
+
+  // Full-document ultra-fast search execution
+  useEffect(() => {
+    if (!searchQuery.trim() || !numPages) {
       setSearchResults([]);
       setActiveMatchIndex(-1);
-      setIsSearching(false);
       return;
     }
 
     setIsSearching(true);
-    const cleanQuery = query.trim().toLowerCase();
-    const results = [];
+    const query = searchQuery.toLowerCase().trim();
+    const matches = [];
 
-    for (let pageNum = 1; pageNum <= pdfDocument.numPages; pageNum++) {
-      let pageData = pageTextCache.current.get(pageNum);
-      if (!pageData) {
-        try {
-          const page = await pdfDocument.getPage(pageNum);
-          const textContent = await page.getTextContent();
-          const fullText = textContent.items.map(item => item.str).join(' ');
-          pageData = { fullText, items: textContent.items };
-          pageTextCache.current.set(pageNum, pageData);
-        } catch (e) {
-          continue;
+    const runSearch = async () => {
+      for (let p = 1; p <= numPages; p++) {
+        let text = pageTextCache.current.get(p);
+        if (!text && pdfDocument) {
+          try {
+            const page = await pdfDocument.getPage(p);
+            const tc = await page.getTextContent();
+            text = tc.items.map(item => item.str).join(' ');
+            pageTextCache.current.set(p, text);
+          } catch {
+            text = '';
+          }
+        }
+
+        if (text) {
+          const lower = text.toLowerCase();
+          let pos = 0;
+          while ((pos = lower.indexOf(query, pos)) !== -1) {
+            const snippetStart = Math.max(0, pos - 30);
+            const snippetEnd = Math.min(text.length, pos + query.length + 30);
+            const snippet = (snippetStart > 0 ? '…' : '') + text.substring(snippetStart, snippetEnd) + (snippetEnd < text.length ? '…' : '');
+
+            matches.push({
+              pageNumber: p,
+              snippet,
+              index: matches.length,
+            });
+            pos += query.length;
+          }
         }
       }
 
-      const lower = pageData.fullText.toLowerCase();
-      let startIndex = 0;
-      let matchInPage = 0;
+      setSearchResults(matches);
+      setIsSearching(false);
 
-      while ((startIndex = lower.indexOf(cleanQuery, startIndex)) !== -1) {
-        const snippetStart = Math.max(0, startIndex - 28);
-        const snippetEnd = Math.min(pageData.fullText.length, startIndex + cleanQuery.length + 32);
-        const snippet = (snippetStart > 0 ? '…' : '') +
-          pageData.fullText.slice(snippetStart, snippetEnd) +
-          (snippetEnd < pageData.fullText.length ? '…' : '');
-
-        results.push({
-          id: `match-${pageNum}-${matchInPage}`,
-          pageNumber: pageNum,
-          matchIndexInPage: matchInPage,
-          snippet,
-          globalIndex: results.length,
-        });
-
-        matchInPage++;
-        startIndex += Math.max(1, cleanQuery.length);
+      if (matches.length > 0) {
+        setActiveMatchIndex(0);
+        scrollToPage(matches[0].pageNumber);
+      } else {
+        setActiveMatchIndex(-1);
       }
-    }
+    };
 
-    setSearchResults(results);
-    setIsSearching(false);
-
-    if (results.length > 0) {
-      setActiveMatchIndex(0);
-    } else {
-      setActiveMatchIndex(-1);
-    }
-  }, [pdfDocument]);
-
-  // Debounced search trigger
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      performSearch(searchQuery);
-    }, 180);
+    const timer = setTimeout(runSearch, 120);
     return () => clearTimeout(timer);
-  }, [searchQuery, performSearch]);
+  }, [searchQuery, numPages, pdfDocument, scrollToPage]);
 
-  // Active match reference
+  // Search Next/Prev handlers
+  const handleNextMatch = useCallback(() => {
+    if (searchResults.length === 0) return;
+    const nextIdx = (activeMatchIndex + 1) % searchResults.length;
+    setActiveMatchIndex(nextIdx);
+    scrollToPage(searchResults[nextIdx].pageNumber);
+  }, [searchResults, activeMatchIndex, scrollToPage]);
+
+  const handlePrevMatch = useCallback(() => {
+    if (searchResults.length === 0) return;
+    const prevIdx = (activeMatchIndex - 1 + searchResults.length) % searchResults.length;
+    setActiveMatchIndex(prevIdx);
+    scrollToPage(searchResults[prevIdx].pageNumber);
+  }, [searchResults, activeMatchIndex, scrollToPage]);
+
+  // Active match data
   const activeMatch = useMemo(() => {
     if (activeMatchIndex >= 0 && activeMatchIndex < searchResults.length) {
       return searchResults[activeMatchIndex];
     }
     return null;
-  }, [activeMatchIndex, searchResults]);
+  }, [searchResults, activeMatchIndex]);
 
-  // Auto-focus and scroll to active match
+  // Text selection tracking
   useEffect(() => {
-    if (!activeMatch) return;
-
-    scrollToPage(activeMatch.pageNumber);
-
-    const scrollTimeout = setTimeout(() => {
-      const activeEl =
-        document.querySelector(`.active-pdf-match[data-page="${activeMatch.pageNumber}"]`) ||
-        document.querySelector('.active-pdf-match') ||
-        document.getElementById(`page-${activeMatch.pageNumber}`);
-
-      if (activeEl) {
-        activeEl.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+    const handleSelectionChange = () => {
+      const selection = window.getSelection();
+      if (!selection || selection.isCollapsed || !selection.toString().trim()) {
+        setSelectionBox(null);
+        setSelectedText('');
+        return;
       }
-    }, 160);
 
-    return () => clearTimeout(scrollTimeout);
-  }, [activeMatch, scrollToPage]);
+      const text = selection.toString().trim();
+      if (text.length > 0) {
+        const range = selection.getRangeAt(0);
+        const rect = range.getBoundingClientRect();
+        setSelectedText(text);
+        setSelectionBox({
+          top: Math.max(10, rect.top - 46),
+          left: Math.max(10, rect.left + rect.width / 2 - 80),
+        });
+      }
+    };
 
-  // Next / Previous match navigation
-  const handleNextMatch = useCallback(() => {
-    if (searchResults.length === 0) return;
-    setActiveMatchIndex(idx => (idx + 1) % searchResults.length);
-  }, [searchResults.length]);
-
-  const handlePrevMatch = useCallback(() => {
-    if (searchResults.length === 0) return;
-    setActiveMatchIndex(idx => (idx - 1 + searchResults.length) % searchResults.length);
-  }, [searchResults.length]);
-
-  // Zoom
-  const zoomIn  = useCallback(() =>
-    setScale(s => +Math.min(s + ZOOM_STEP, MAX_ZOOM).toFixed(2)), []);
-  const zoomOut = useCallback(() =>
-    setScale(s => +Math.max(s - ZOOM_STEP, MIN_ZOOM).toFixed(2)), []);
-
-  // Rotate
-  const handleRotate = useCallback(() => {
-    setRotation(r => (r + 90) % 360);
+    document.addEventListener('mouseup', handleSelectionChange);
+    return () => document.removeEventListener('mouseup', handleSelectionChange);
   }, []);
 
-  // Fullscreen Toggle
+  // Zoom controls
+  const zoomIn  = useCallback(() => setScale(s => Math.min(MAX_ZOOM, +(s + ZOOM_STEP).toFixed(1))), []);
+  const zoomOut = useCallback(() => setScale(s => Math.max(MIN_ZOOM, +(s - ZOOM_STEP).toFixed(1))), []);
+  const rotate  = useCallback(() => {
+    recordSnapshot();
+    setRotation(r => (r + 90) % 360);
+  }, [recordSnapshot]);
+
+  // Fullscreen toggle
   const toggleFullscreen = useCallback(() => {
     if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().catch(() => {});
+      document.documentElement.requestFullscreen().then(() => setIsFullscreen(true)).catch(() => {});
     } else {
-      document.exitFullscreen().catch(() => {});
+      document.exitFullscreen().then(() => setIsFullscreen(false)).catch(() => {});
     }
   }, []);
 
-  // Print Document
-  const handlePrint = useCallback(() => {
-    window.print();
-  }, []);
+  // Keyboard shortcuts (including Ctrl+Z for Undo, Ctrl+Y for Redo, Ctrl+F for Search)
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
 
-  // Download PDF (with embedded digital signatures if placed)
+      // Undo / Redo
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+        if (e.shiftKey) {
+          e.preventDefault();
+          handleRedo();
+        } else {
+          e.preventDefault();
+          handleUndo();
+        }
+        return;
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') {
+        e.preventDefault();
+        handleRedo();
+        return;
+      }
+
+      // Search (Ctrl+F)
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f') {
+        e.preventDefault();
+        if (searchInputRef.current) {
+          searchInputRef.current.focus();
+          searchInputRef.current.select();
+        }
+        return;
+      }
+
+      if (e.key === 'ArrowDown' || e.key === 'j') {
+        e.preventDefault();
+        mainRef.current?.scrollBy({ top: SCROLL_PX, behavior: 'smooth' });
+      } else if (e.key === 'ArrowUp' || e.key === 'k') {
+        e.preventDefault();
+        mainRef.current?.scrollBy({ top: -SCROLL_PX, behavior: 'smooth' });
+      } else if (e.key === 'PageDown' || e.key === ' ') {
+        e.preventDefault();
+        scrollToPage(currentRef.current + 1);
+      } else if (e.key === 'PageUp') {
+        e.preventDefault();
+        scrollToPage(currentRef.current - 1);
+      } else if (e.key === 'Home') {
+        e.preventDefault();
+        scrollToPage(1);
+      } else if (e.key === 'End') {
+        e.preventDefault();
+        scrollToPage(numRef.current ?? 1);
+      } else if (e.key === '+' || e.key === '=') {
+        zoomIn();
+      } else if (e.key === '-') {
+        zoomOut();
+      } else if (e.key === 'r' && !e.ctrlKey && !e.metaKey) {
+        rotate();
+      } else if (e.key === 's' && !e.ctrlKey && !e.metaKey) {
+        setShowSidebar(v => !v);
+      } else if (e.key === 'Escape') {
+        setIsAnnotateMode(false);
+        setActiveAnnotateTool(null);
+        setSelectionBox(null);
+        setPendingSignature(null);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [scrollToPage, zoomIn, zoomOut, rotate, handleUndo, handleRedo]);
+
+  // Download File handler baking signatures and annotations
   const handleDownload = useCallback(async () => {
     if (!file) return;
 
-    if (placedSignatures.length > 0) {
+    if (placedSignatures.length > 0 || annotations.length > 0) {
       try {
         const fileBuffer = await file.arrayBuffer();
         const pdfDoc = await PDFDocument.load(fileBuffer, { ignoreEncryption: true });
+        const font = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
         const pages = pdfDoc.getPages();
 
+        // Bake digital signatures
         for (const sig of placedSignatures) {
           const targetPage = pages[sig.pageNumber - 1];
           if (!targetPage) continue;
 
-          // Convert dataUrl to Uint8Array
           const base64Data = sig.dataUrl.split(',')[1];
           const binaryString = atob(base64Data);
           const sigBytes = new Uint8Array(binaryString.length);
@@ -594,7 +773,6 @@ export default function PDFViewer({ file: initialFile, theme = 'light', onToggle
           const sigH = (160 * (embeddedSig.height / embeddedSig.width)) * scaleRatio;
 
           const sigX = sig.x * scaleRatio;
-          // Invert Y axis for PDF coordinate system (origin bottom-left)
           const sigY = pageH - (sig.y * scaleRatio) - sigH;
 
           targetPage.drawImage(embeddedSig, {
@@ -605,25 +783,49 @@ export default function PDFViewer({ file: initialFile, theme = 'light', onToggle
           });
         }
 
+        // Bake text block annotations
+        for (const ann of annotations) {
+          if (ann.type === 'text' && ann.content) {
+            const targetPage = pages[ann.pageNumber - 1];
+            if (!targetPage) continue;
+            const { width: pageW, height: pageH } = targetPage.getSize();
+            const scaleRatio = pageW / (pageWidth || 600);
+
+            const hex = (ann.color || '#ff0055').replace('#', '');
+            const r = parseInt(hex.substring(0, 2), 16) / 255 || 0;
+            const g = parseInt(hex.substring(2, 4), 16) / 255 || 0;
+            const b = parseInt(hex.substring(4, 6), 16) / 255 || 0;
+
+            targetPage.drawText(ann.content, {
+              x: ann.x * scaleRatio,
+              y: pageH - (ann.y * scaleRatio) - 16,
+              size: (ann.fontSize || 16) * scaleRatio,
+              font,
+              color: rgb(r, g, b),
+            });
+          }
+        }
+
         const signedBytes = await pdfDoc.save();
-        downloadFile(signedBytes, `signed_${file.name || 'document.pdf'}`);
+        const exportName = customDocName || file.name || 'document.pdf';
+        downloadFile(signedBytes, exportName.startsWith('signed_') ? exportName : `signed_${exportName}`);
         return;
       } catch (err) {
-        console.error('Error baking digital signature into PDF:', err);
+        console.error('Error baking annotations into PDF:', err);
       }
     }
 
     const url = typeof file === 'string' ? file : URL.createObjectURL(file);
     const a = document.createElement('a');
     a.href = url;
-    a.download = file.name || 'document.pdf';
+    a.download = customDocName || file.name || 'document.pdf';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     if (typeof file !== 'string') {
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     }
-  }, [file, placedSignatures, pageWidth]);
+  }, [file, customDocName, placedSignatures, annotations, pageWidth]);
 
   // Copy selected text
   const handleCopySelection = useCallback(() => {
@@ -648,7 +850,9 @@ export default function PDFViewer({ file: initialFile, theme = 'light', onToggle
     if (!pendingSignature) return;
     const rect = e.currentTarget.getBoundingClientRect();
     const x = e.clientX - rect.left - 70;
-    const y = e.clientY - rect.top - 30;
+    const y = e.clientY - rect.top - 35;
+
+    recordSnapshot();
     setPlacedSignatures(prev => [
       ...prev,
       {
@@ -657,113 +861,60 @@ export default function PDFViewer({ file: initialFile, theme = 'light', onToggle
         x: Math.max(10, x),
         y: Math.max(10, y),
         dataUrl: pendingSignature,
-      },
+      }
     ]);
     setPendingSignature(null);
   };
 
-  // Keyboard handler
-  useEffect(() => {
-    const onKey = (e) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f') {
-        e.preventDefault();
-        searchInputRef.current?.focus();
-        return;
-      }
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'p') {
-        e.preventDefault();
-        handlePrint();
-        return;
-      }
+  // Render range calculation for virtual scrolling
+  const renderMin = Math.max(1, renderCenter - RENDER_BUFFER);
+  const renderMax = numPages ? Math.min(numPages, renderCenter + RENDER_BUFFER) : 1;
 
-      if (e.target.tagName === 'INPUT') {
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          if (e.shiftKey) {
-            handlePrevMatch();
-          } else {
-            handleNextMatch();
-          }
-        }
-        if (e.key === 'Escape') {
-          e.target.blur();
-        }
-        return;
-      }
-
-      switch (e.key) {
-        case '=': case '+': e.preventDefault();
-          setScale(s => +Math.min(s + ZOOM_STEP, MAX_ZOOM).toFixed(2)); break;
-        case '-': e.preventDefault();
-          setScale(s => +Math.max(s - ZOOM_STEP, MIN_ZOOM).toFixed(2)); break;
-        case 'r': case 'R': e.preventDefault(); handleRotate(); break;
-        case 'd': case 'D': e.preventDefault(); handleToggleDarkMode(); break;
-        case 'v': case 'V': e.preventDefault();
-          setViewMode(m => (m === 'single' ? 'two-page' : 'single')); break;
-        case 's': case 'S': e.preventDefault(); setShowSidebar(v => !v); break;
-        case 'f': case 'F': e.preventDefault(); toggleFullscreen(); break;
-        case 'ArrowDown': e.preventDefault();
-          mainRef.current?.scrollBy({ top:  SCROLL_PX, behavior: 'smooth' }); break;
-        case 'ArrowUp':   e.preventDefault();
-          mainRef.current?.scrollBy({ top: -SCROLL_PX, behavior: 'smooth' }); break;
-        case 'PageDown':  e.preventDefault(); scrollToPage(currentRef.current + 1); break;
-        case 'PageUp':    e.preventDefault(); scrollToPage(currentRef.current - 1); break;
-        case 'Home':      e.preventDefault(); scrollToPage(1); break;
-        case 'End':       e.preventDefault(); scrollToPage(numRef.current || 1); break;
-      }
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [scrollToPage, handleRotate, toggleFullscreen, handleToggleDarkMode, handleNextMatch, handlePrevMatch, handlePrint]);
-
-  // Auto-sync sidebar thumbnail
-  useEffect(() => {
-    if (sidebarTab !== 'thumbnails') return;
-    requestAnimationFrame(() => {
-      const thumb = document.getElementById(`thumb-${currentPage}`);
-      if (thumb && sidebarRef.current)
-        thumb.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-    });
-  }, [currentPage, sidebarTab]);
-
-  const pageNums = useMemo(
-    () => Array.from({ length: numPages || 0 }, (_, i) => i + 1),
-    [numPages]
-  );
-
-  // Group pages for Two-Page spread
+  // Build page rows for two-page spread or single-page layout
   const pageRows = useMemo(() => {
-    if (viewMode !== 'two-page' || !numPages) {
-      return pageNums.map(n => [n]);
-    }
+    if (!numPages) return [];
     const rows = [];
-    rows.push([1]); // First cover page alone
-    for (let i = 2; i <= numPages; i += 2) {
-      if (i + 1 <= numPages) {
-        rows.push([i, i + 1]);
-      } else {
+    if (viewMode === 'two-page') {
+      rows.push([1]);
+      for (let i = 2; i <= numPages; i += 2) {
+        if (i + 1 <= numPages) {
+          rows.push([i, i + 1]);
+        } else {
+          rows.push([i]);
+        }
+      }
+    } else {
+      for (let i = 1; i <= numPages; i++) {
         rows.push([i]);
       }
     }
     return rows;
-  }, [pageNums, viewMode, numPages]);
+  }, [numPages, viewMode]);
 
-  const renderMin = renderCenter - RENDER_BUFFER;
-  const renderMax = renderCenter + RENDER_BUFFER;
+  const pageNums = useMemo(() => {
+    if (!numPages) return [];
+    return Array.from({ length: numPages }, (_, i) => i + 1);
+  }, [numPages]);
 
   return (
     <div style={{
       display: 'flex', flexDirection: 'column',
-      height: '100vh', background: 'var(--bg-color)', overflow: 'hidden',
+      height: '100vh', width: '100vw',
+      backgroundColor: 'var(--bg-color)',
+      color: 'var(--text-primary)',
+      overflow: 'hidden',
     }}>
-
-      {/* ── Active Viewer Tool Modals ── */}
+      {/* ── Active Tool Modals ── */}
       <AnimatePresence>
         {activeViewerTool === 'organize' && (
           <PageOrganizerModal
             initialFile={file}
             onClose={() => setActiveViewerTool(null)}
-            onUpdateDocument={(newFile) => { setFile(newFile); setActiveViewerTool(null); }}
+            onUpdateDocument={(newFile) => {
+              recordSnapshot();
+              setFile(newFile);
+              setActiveViewerTool(null);
+            }}
           />
         )}
         {activeViewerTool === 'split' && (
@@ -773,15 +924,37 @@ export default function PDFViewer({ file: initialFile, theme = 'light', onToggle
           <WatermarkTool
             initialFile={file}
             onClose={() => setActiveViewerTool(null)}
-            onUpdateDocument={(newFile) => { setFile(newFile); setActiveViewerTool(null); }}
+            onUpdateDocument={(newFile) => {
+              recordSnapshot();
+              setFile(newFile);
+              setActiveViewerTool(null);
+            }}
           />
         )}
         {activeViewerTool === 'numbering' && (
           <PageNumberingTool
             initialFile={file}
             onClose={() => setActiveViewerTool(null)}
-            onUpdateDocument={(newFile) => { setFile(newFile); setActiveViewerTool(null); }}
+            onUpdateDocument={(newFile) => {
+              recordSnapshot();
+              setFile(newFile);
+              setActiveViewerTool(null);
+            }}
           />
+        )}
+        {activeViewerTool === 'compress' && (
+          <CompressPDFTool
+            initialFile={file}
+            onClose={() => setActiveViewerTool(null)}
+            onUpdateDocument={(newFile) => {
+              recordSnapshot();
+              setFile(newFile);
+              setActiveViewerTool(null);
+            }}
+          />
+        )}
+        {activeViewerTool === 'share' && (
+          <SharePDFModal file={file} onClose={() => setActiveViewerTool(null)} />
         )}
         {activeViewerTool === 'pdf-to-img' && (
           <PDFToImagesTool initialFile={file} onClose={() => setActiveViewerTool(null)} />
@@ -790,7 +963,11 @@ export default function PDFViewer({ file: initialFile, theme = 'light', onToggle
           <PDFSecurityModal
             initialFile={file}
             onClose={() => setActiveViewerTool(null)}
-            onUpdateDocument={(newFile) => { setFile(newFile); setActiveViewerTool(null); }}
+            onUpdateDocument={(newFile) => {
+              recordSnapshot();
+              setFile(newFile);
+              setActiveViewerTool(null);
+            }}
           />
         )}
         {activeViewerTool === 'signature' && (
@@ -825,6 +1002,104 @@ export default function PDFViewer({ file: initialFile, theme = 'light', onToggle
               style={{ color: '#ffffff', padding: 2, marginLeft: 8 }}
             >
               <X size={14} />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Floating Annotation & Markup Toolbar ── */}
+      <AnimatePresence>
+        {isAnnotateMode && (
+          <motion.div
+            initial={{ opacity: 0, y: -15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -15 }}
+            className="glass-panel"
+            style={{
+              position: 'fixed', top: 76, left: '50%', transform: 'translateX(-50%)',
+              zIndex: 140, background: 'var(--bg-color)', padding: '6px 14px',
+              borderRadius: 16, display: 'flex', alignItems: 'center', gap: 8,
+              boxShadow: '0 12px 36px rgba(0,0,0,0.25)', border: '1px solid var(--glass-border)',
+            }}
+          >
+            {[
+              { id: 'pen', label: 'Draw Pen', icon: Edit3 },
+              { id: 'highlighter', label: 'Highlighter', icon: Highlighter },
+              { id: 'text', label: 'Add Text Block', icon: Type },
+              { id: 'comment', label: 'Sticky Note Comment', icon: MessageSquare },
+              { id: 'rect', label: 'Rectangle Shape', icon: Square },
+              { id: 'circle', label: 'Circle Shape', icon: Circle },
+              { id: 'arrow', label: 'Arrow Shape', icon: ArrowUpRight },
+            ].map(t => {
+              const Icon = t.icon;
+              const isSelected = activeAnnotateTool === t.id;
+              return (
+                <button
+                  key={t.id}
+                  className="btn"
+                  onClick={() => setActiveAnnotateTool(isSelected ? null : t.id)}
+                  style={{
+                    padding: '6px 10px', fontSize: 12, gap: 5, borderRadius: 8,
+                    background: isSelected ? 'var(--accent)' : 'var(--glass-bg)',
+                    color: isSelected ? 'var(--bg-color)' : 'var(--text-primary)',
+                  }}
+                  title={t.label}
+                >
+                  <Icon size={14} />
+                  <span style={{ display: 'none' }}>{t.label}</span>
+                </button>
+              );
+            })}
+
+            <div style={{ width: 1, height: 18, background: 'var(--glass-border)' }} />
+
+            {/* Color Swatch / Native Color Picker */}
+            <input
+              type="color"
+              value={annotateColor}
+              onChange={e => setAnnotateColor(e.target.value)}
+              style={{ width: 26, height: 26, borderRadius: 6, border: 'none', cursor: 'pointer', background: 'transparent' }}
+              title="Annotation Color"
+            />
+
+            {/* Stroke Width Selector */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              {[2, 4, 8].map(w => (
+                <button
+                  key={w}
+                  className="btn"
+                  onClick={() => setAnnotateStrokeWidth(w)}
+                  style={{
+                    width: 24, height: 24, padding: 0, borderRadius: 6,
+                    background: annotateStrokeWidth === w ? 'var(--accent)' : 'transparent',
+                    color: annotateStrokeWidth === w ? 'var(--bg-color)' : 'var(--text-secondary)',
+                    fontSize: 11, fontWeight: 600,
+                  }}
+                >
+                  {w}
+                </button>
+              ))}
+            </div>
+
+            {/* Clear all annotations button */}
+            {annotations.length > 0 && (
+              <button
+                className="btn"
+                onClick={() => { recordSnapshot(); setAnnotations([]); }}
+                style={{ padding: '4px 8px', color: '#ff3b30', fontSize: 11, gap: 4 }}
+                title="Clear all annotations"
+              >
+                <Trash2 size={13} /> Clear
+              </button>
+            )}
+
+            <button
+              className="btn"
+              onClick={() => { setIsAnnotateMode(false); setActiveAnnotateTool(null); }}
+              style={{ padding: 4 }}
+              title="Close annotation toolbar"
+            >
+              <X size={14} color="var(--text-secondary)" />
             </button>
           </motion.div>
         )}
@@ -865,7 +1140,7 @@ export default function PDFViewer({ file: initialFile, theme = 'light', onToggle
         )}
       </AnimatePresence>
 
-      {/* ── Floating Navbar ── */}
+      {/* ── Floating Top Navbar ── */}
       <motion.nav
         initial={{ y: -80, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
@@ -878,7 +1153,7 @@ export default function PDFViewer({ file: initialFile, theme = 'light', onToggle
         }}
       >
         {/* Left Controls */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <button className="btn" onClick={onClose} title="Close Document" style={{ padding: 6 }}>
             <X size={18} color="var(--text-secondary)" />
           </button>
@@ -901,13 +1176,69 @@ export default function PDFViewer({ file: initialFile, theme = 'light', onToggle
             <LayoutList size={18} color={showSidebar ? 'var(--bg-color)' : 'var(--text-secondary)'} />
           </motion.button>
 
+          {/* Undo / Redo buttons */}
+          <button
+            className="btn"
+            disabled={history.length === 0}
+            onClick={handleUndo}
+            title="Undo last action (Ctrl+Z)"
+            style={{ padding: 5, opacity: history.length > 0 ? 1 : 0.35 }}
+          >
+            <Undo2 size={16} />
+          </button>
+          <button
+            className="btn"
+            disabled={future.length === 0}
+            onClick={handleRedo}
+            title="Redo action (Ctrl+Y / Ctrl+Shift+Z)"
+            style={{ padding: 5, opacity: future.length > 0 ? 1 : 0.35 }}
+          >
+            <Redo2 size={16} />
+          </button>
+
           <div style={{ width: 1, height: 20, background: 'var(--glass-border)' }} />
-          <span style={{
-            fontSize: 13, fontWeight: 500,
-            maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-          }}>
-            {file.name}
-          </span>
+
+          {/* Document Title with Pencil Rename Support */}
+          {isRenamingDoc ? (
+            <input
+              ref={renameInputRef}
+              type="text"
+              value={customDocName}
+              onChange={e => setCustomDocName(e.target.value)}
+              onBlur={() => setIsRenamingDoc(false)}
+              onKeyDown={e => {
+                if (e.key === 'Enter' || e.key === 'Escape') {
+                  recordSnapshot();
+                  setIsRenamingDoc(false);
+                }
+              }}
+              className="doc-title-input"
+              style={{ width: 160 }}
+            />
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span
+                onDoubleClick={() => setIsRenamingDoc(true)}
+                title="Double click or click pencil to rename"
+                style={{
+                  fontSize: 13, fontWeight: 600,
+                  maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                  cursor: 'pointer',
+                }}
+              >
+                {customDocName}
+              </span>
+              <button
+                className="btn"
+                onClick={() => setIsRenamingDoc(true)}
+                title="Rename PDF"
+                style={{ padding: 3 }}
+              >
+                <Pencil size={13} color="var(--text-secondary)" />
+              </button>
+            </div>
+          )}
+
           {numPages && (
             <span style={{ fontSize: 12, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
               — {numPages}p
@@ -915,25 +1246,46 @@ export default function PDFViewer({ file: initialFile, theme = 'light', onToggle
           )}
         </div>
 
-        {/* Center / Navigation Controls */}
-        {numPages && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            <button className="btn" onClick={() => scrollToPage(currentPage - 1)} style={{ padding: 4 }} title="Previous Page (PgUp)">
-              <ChevronUp size={16} color="var(--text-secondary)" />
-            </button>
-            <span style={{ fontSize: 13, minWidth: 64, textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>
-              {currentPage} / {numPages}
-            </span>
-            <button className="btn" onClick={() => scrollToPage(currentPage + 1)} style={{ padding: 4 }} title="Next Page (PgDn)">
-              <ChevronDown size={16} color="var(--text-secondary)" />
-            </button>
-          </div>
-        )}
+        {/* Center / Navigation & Markup Controls */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {numPages && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <button className="btn" onClick={() => scrollToPage(currentPage - 1)} style={{ padding: 4 }} title="Previous Page (PgUp)">
+                <ChevronUp size={16} color="var(--text-secondary)" />
+              </button>
+              <span style={{ fontSize: 13, minWidth: 64, textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>
+                {currentPage} / {numPages}
+              </span>
+              <button className="btn" onClick={() => scrollToPage(currentPage + 1)} style={{ padding: 4 }} title="Next Page (PgDn)">
+                <ChevronDown size={16} color="var(--text-secondary)" />
+              </button>
+            </div>
+          )}
+
+          {/* Annotate & Markup Toggle */}
+          <button
+            className="btn"
+            onClick={() => {
+              setIsAnnotateMode(v => !v);
+              if (!isAnnotateMode) setActiveAnnotateTool('pen');
+              else setActiveAnnotateTool(null);
+            }}
+            title="Edit & Annotate PDF (Draw, Text Blocks, Shapes, Comments)"
+            style={{
+              padding: '5px 10px', borderRadius: 8, fontSize: 12, gap: 5,
+              background: isAnnotateMode ? 'var(--accent)' : 'var(--glass-bg)',
+              color: isAnnotateMode ? 'var(--bg-color)' : 'var(--text-primary)',
+              border: '1px solid var(--glass-border)', fontWeight: 600,
+            }}
+          >
+            <Edit3 size={14} /> Annotate
+          </button>
+        </div>
 
         {/* Right Tools */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           
-          {/* ── Ultra Fast Search Bar with Next/Prev & Counter ── */}
+          {/* ── Ultra Fast Search Bar with Auto-Focus & Neon Highlights ── */}
           <div style={{
             position: 'relative', display: 'flex', alignItems: 'center',
             background: 'var(--glass-bg)', border: '1px solid var(--glass-border)',
@@ -947,6 +1299,7 @@ export default function PDFViewer({ file: initialFile, theme = 'light', onToggle
               type="text"
               placeholder="Search in doc…"
               value={searchQuery}
+              onFocus={e => e.target.select()}
               onChange={e => setSearchQuery(e.target.value)}
               style={{
                 background: 'transparent',
@@ -1002,6 +1355,16 @@ export default function PDFViewer({ file: initialFile, theme = 'light', onToggle
 
           <div style={{ width: 1, height: 20, background: 'var(--glass-border)' }} />
 
+          {/* Share PDF Button */}
+          <button
+            className="btn"
+            onClick={() => setActiveViewerTool('share')}
+            title="Share Document"
+            style={{ padding: 6 }}
+          >
+            <Share2 size={16} color="var(--text-secondary)" />
+          </button>
+
           {/* ── Power Tools Dropdown Trigger ── */}
           <div style={{ position: 'relative' }}>
             <button
@@ -1040,6 +1403,13 @@ export default function PDFViewer({ file: initialFile, theme = 'light', onToggle
                 >
                   <button
                     className="btn"
+                    onClick={() => { setActiveViewerTool('compress'); setShowToolsMenu(false); }}
+                    style={{ justifyContent: 'flex-start', padding: '8px 10px', fontSize: 13, gap: 8, borderRadius: 8 }}
+                  >
+                    <Minimize2 size={15} color="#34c759" /> Compress PDF
+                  </button>
+                  <button
+                    className="btn"
                     onClick={() => { setActiveViewerTool('organize'); setShowToolsMenu(false); }}
                     style={{ justifyContent: 'flex-start', padding: '8px 10px', fontSize: 13, gap: 8, borderRadius: 8 }}
                   >
@@ -1064,7 +1434,7 @@ export default function PDFViewer({ file: initialFile, theme = 'light', onToggle
                     onClick={() => { setActiveViewerTool('watermark'); setShowToolsMenu(false); }}
                     style={{ justifyContent: 'flex-start', padding: '8px 10px', fontSize: 13, gap: 8, borderRadius: 8 }}
                   >
-                    <Stamp size={15} color="#ff9500" /> Watermark & Stamp
+                    <Stamp size={15} color="#ff9500" /> Watermark & Tint
                   </button>
                   <button
                     className="btn"
@@ -1075,10 +1445,17 @@ export default function PDFViewer({ file: initialFile, theme = 'light', onToggle
                   </button>
                   <button
                     className="btn"
+                    onClick={() => { setActiveViewerTool('share'); setShowToolsMenu(false); }}
+                    style={{ justifyContent: 'flex-start', padding: '8px 10px', fontSize: 13, gap: 8, borderRadius: 8 }}
+                  >
+                    <Share2 size={15} color="#0071e3" /> Share PDF
+                  </button>
+                  <button
+                    className="btn"
                     onClick={() => { setActiveViewerTool('pdf-to-img'); setShowToolsMenu(false); }}
                     style={{ justifyContent: 'flex-start', padding: '8px 10px', fontSize: 13, gap: 8, borderRadius: 8 }}
                   >
-                    <FileImage size={15} color="#30b0c7" /> Export to Images ZIP
+                    <FileImage size={15} color="#30b0c7" /> Export Images ZIP
                   </button>
                   <button
                     className="btn"
@@ -1098,107 +1475,91 @@ export default function PDFViewer({ file: initialFile, theme = 'light', onToggle
           <button className="btn" onClick={zoomOut} title="Zoom out (-)" style={{ padding: 5 }}>
             <ZoomOut size={15} color="var(--text-secondary)" />
           </button>
-          <span style={{ fontSize: 12, fontWeight: 500, minWidth: 34, textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>
+          <span style={{ fontSize: 11, minWidth: 36, textAlign: 'center', color: 'var(--text-secondary)' }}>
             {Math.round(scale * 100)}%
           </span>
           <button className="btn" onClick={zoomIn} title="Zoom in (+)" style={{ padding: 5 }}>
             <ZoomIn size={15} color="var(--text-secondary)" />
           </button>
 
-          <div style={{ width: 1, height: 20, background: 'var(--glass-border)' }} />
-
-          {/* View Mode (Single vs Two-Page Spread) */}
+          {/* Two-page Spread Switcher */}
           <button
             className="btn"
-            onClick={() => setViewMode(m => (m === 'single' ? 'two-page' : 'single'))}
-            title={viewMode === 'two-page' ? "Switch to Single Page (V)" : "Switch to 2-Page Book Spread (V)"}
+            onClick={() => setViewMode(v => v === 'single' ? 'two-page' : 'single')}
+            title={viewMode === 'two-page' ? 'Single page view' : 'Two-page spread view'}
             style={{
               padding: 5,
-              background: viewMode === 'two-page' ? 'var(--glass-border)' : 'transparent',
-              borderRadius: 8,
+              background: viewMode === 'two-page' ? 'var(--accent)' : 'transparent',
+              color: viewMode === 'two-page' ? 'var(--bg-color)' : 'var(--text-secondary)',
+              borderRadius: 6,
             }}
           >
-            <BookOpen size={15} color="var(--text-secondary)" />
+            <BookOpen size={16} />
           </button>
 
-          {/* Rotate Button */}
-          <button className="btn" onClick={handleRotate} title="Rotate 90° (R)" style={{ padding: 5 }}>
+          {/* Rotate Clockwise */}
+          <button className="btn" onClick={rotate} title="Rotate 90° (R)" style={{ padding: 5 }}>
             <RotateCw size={15} color="var(--text-secondary)" />
           </button>
 
-          {/* Dark / Light Mode Toggle */}
+          {/* Invert Dark / Light Mode */}
+          <button className="btn" onClick={handleToggleDarkMode} title="Toggle Dark/Light Mode" style={{ padding: 5 }}>
+            {isDarkMode ? <Sun size={15} color="var(--text-secondary)" /> : <Moon size={15} color="var(--text-secondary)" />}
+          </button>
+
+          {/* Fullscreen */}
+          <button className="btn" onClick={toggleFullscreen} title="Fullscreen (F11)" style={{ padding: 5 }}>
+            {isFullscreen ? <Minimize size={15} color="var(--text-secondary)" /> : <Maximize size={15} color="var(--text-secondary)" />}
+          </button>
+
+          {/* Download */}
           <button
-            className="btn"
-            onClick={handleToggleDarkMode}
-            title={isDarkMode ? "Switch to Light Mode (D)" : "Switch to Dark Mode (D)"}
-            style={{
-              padding: 5,
-              background: isDarkMode ? 'var(--accent)' : 'transparent',
-              borderRadius: 8,
-              transition: 'background 0.2s ease',
-            }}
+            className="btn btn-primary"
+            onClick={handleDownload}
+            title="Download PDF"
+            style={{ padding: '5px 10px', fontSize: 12, gap: 5 }}
           >
-            {isDarkMode ? (
-              <Sun size={15} color="var(--bg-color)" />
-            ) : (
-              <Moon size={15} color="var(--text-secondary)" />
-            )}
-          </button>
-
-          {/* Print PDF */}
-          <button className="btn" onClick={handlePrint} title="Print Document (Ctrl+P)" style={{ padding: 5 }}>
-            <Printer size={15} color="var(--text-secondary)" />
-          </button>
-
-          {/* Download PDF */}
-          <button className="btn" onClick={handleDownload} title="Download PDF" style={{ padding: 5 }}>
-            <Download size={15} color="var(--text-secondary)" />
-          </button>
-
-          {/* Fullscreen Toggle */}
-          <button className="btn" onClick={toggleFullscreen} title={isFullscreen ? "Exit Fullscreen (F)" : "Fullscreen (F)"} style={{ padding: 5 }}>
-            {isFullscreen ? (
-              <Minimize size={15} color="var(--text-secondary)" />
-            ) : (
-              <Maximize size={15} color="var(--text-secondary)" />
-            )}
+            <Download size={14} /> Download
           </button>
         </div>
       </motion.nav>
 
-      {/* ── Body ── */}
-      <div style={{ display: 'flex', flex: 1, overflow: 'hidden', paddingTop: 80 }}>
-
-        {/* ── Sidebar (Thumbnails, Outline & Search Snippets) ── */}
-        <AnimatePresence initial={false}>
+      {/* ── Main Workspace Body (Sidebar + Viewport) ── */}
+      <div style={{ display: 'flex', flex: 1, overflow: 'hidden', paddingTop: 68 }}>
+        
+        {/* ── Collapsible Sidebar ── */}
+        <AnimatePresence>
           {showSidebar && (
             <motion.aside
-              key="sidebar"
-              initial={{ width: 0, opacity: 0 }}
-              animate={{ width: sidebarTab === 'thumbnails' ? 172 : 250, opacity: 1 }}
-              exit={{ width: 0, opacity: 0 }}
-              transition={{ type: 'spring', damping: 26, stiffness: 230 }}
               ref={sidebarRef}
+              initial={{ width: 0, opacity: 0 }}
+              animate={{ width: 220, opacity: 1 }}
+              exit={{ width: 0, opacity: 0 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 220 }}
+              className="glass-panel"
               style={{
                 height: '100%',
-                overflowY: 'auto',
-                overflowX: 'hidden',
-                borderRight: '1px solid var(--glass-border)',
-                background: 'var(--glass-bg)',
                 display: 'flex',
                 flexDirection: 'column',
-                alignItems: 'center',
+                borderRight: '1px solid var(--glass-border)',
+                borderTop: 'none', borderBottom: 'none', borderLeft: 'none',
+                borderRadius: 0,
+                overflowY: 'auto',
+                overflowX: 'hidden',
                 flexShrink: 0,
-                scrollbarWidth: 'thin',
-                willChange: 'transform, width',
+                zIndex: 40,
               }}
             >
-              {/* Sidebar Mode Tabs */}
+              {/* Sidebar Tabs */}
               <div style={{
-                display: 'flex', width: '100%',
+                display: 'flex',
+                padding: '10px 8px 6px',
                 borderBottom: '1px solid var(--glass-border)',
-                padding: '6px 8px', gap: 3, position: 'sticky', top: 0,
-                background: 'var(--glass-bg)', zIndex: 10, backdropFilter: 'blur(12px)',
+                gap: 4,
+                position: 'sticky', top: 0,
+                background: 'var(--glass-bg)',
+                backdropFilter: 'blur(16px)',
+                zIndex: 10,
               }}>
                 <button
                   className="btn"
@@ -1211,7 +1572,7 @@ export default function PDFViewer({ file: initialFile, theme = 'light', onToggle
                   }}
                   title="Page Thumbnails"
                 >
-                  <LayoutList size={13} /> Pages
+                  <LayoutGrid size={13} /> Pages
                 </button>
                 <button
                   className="btn"
@@ -1268,52 +1629,51 @@ export default function PDFViewer({ file: initialFile, theme = 'light', onToggle
                       />
                       {hasOutline === false && (
                         <div style={{ padding: '24px 12px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: 12 }}>
-                          No bookmarks or table of contents found in this document.
+                          No table of contents embedded in this document.
                         </div>
                       )}
                     </div>
                   )}
 
                   {sidebarTab === 'search' && (
-                    <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 6 }}>
-                      {searchResults.length === 0 ? (
-                        <div style={{ padding: '24px 12px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: 12 }}>
-                          {searchQuery ? 'No matching phrases found in document.' : 'Type a phrase in the top search bar to view results.'}
+                    <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 6, padding: '0 4px' }}>
+                      {!searchQuery.trim() ? (
+                        <div style={{ padding: '24px 8px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: 12 }}>
+                          Type a word or phrase in the search bar above.
+                        </div>
+                      ) : isSearching ? (
+                        <div style={{ padding: '24px 8px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: 12 }}>
+                          Searching document…
+                        </div>
+                      ) : searchResults.length === 0 ? (
+                        <div style={{ padding: '24px 8px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: 12 }}>
+                          No matches found for "{searchQuery}".
                         </div>
                       ) : (
-                        searchResults.map((result, idx) => (
+                        searchResults.map((match, idx) => (
                           <div
-                            key={result.id}
+                            key={idx}
                             onClick={() => {
                               setActiveMatchIndex(idx);
-                              scrollToPage(result.pageNumber);
+                              scrollToPage(match.pageNumber);
                             }}
                             style={{
                               padding: '8px 10px',
                               borderRadius: 8,
                               cursor: 'pointer',
-                              background: activeMatchIndex === idx ? 'var(--glass-border)' : 'transparent',
-                              border: activeMatchIndex === idx ? '1px solid var(--accent)' : '1px solid transparent',
+                              background: activeMatchIndex === idx ? 'var(--accent)' : 'var(--glass-bg)',
+                              color: activeMatchIndex === idx ? 'var(--bg-color)' : 'var(--text-primary)',
+                              border: '1px solid var(--glass-border)',
+                              fontSize: 12,
+                              lineHeight: 1.4,
                               transition: 'all 0.15s ease',
-                              display: 'flex',
-                              flexDirection: 'column',
-                              gap: 4,
                             }}
                           >
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                              <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--accent)' }}>
-                                Page {result.pageNumber}
-                              </span>
-                              <span style={{ fontSize: 10, color: 'var(--text-secondary)' }}>
-                                #{idx + 1}
-                              </span>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 600, fontSize: 10, opacity: 0.8, marginBottom: 3 }}>
+                              <span>Page {match.pageNumber}</span>
+                              <span>Match #{idx + 1}</span>
                             </div>
-                            <span style={{
-                              fontSize: 12, color: 'var(--text-primary)',
-                              lineHeight: 1.35, wordBreak: 'break-word',
-                            }}>
-                              {result.snippet}
-                            </span>
+                            <span style={{ fontSize: 11 }}>{match.snippet}</span>
                           </div>
                         ))
                       )}
@@ -1384,6 +1744,14 @@ export default function PDFViewer({ file: initialFile, theme = 'light', onToggle
                       searchQuery={searchQuery}
                       activeMatch={activeMatch}
                       placedSignatures={placedSignatures}
+                      annotations={annotations}
+                      activeAnnotateTool={activeAnnotateTool}
+                      annotateColor={annotateColor}
+                      annotateStrokeWidth={annotateStrokeWidth}
+                      annotateOpacity={annotateOpacity}
+                      onAddAnnotation={handleAddAnnotation}
+                      onUpdateAnnotation={handleUpdateAnnotation}
+                      onDeleteAnnotation={handleDeleteAnnotation}
                       onPageClick={handlePageClick}
                       inRange={num >= renderMin && num <= renderMax}
                       cachedHeight={heightCache.current[num]}
@@ -1400,6 +1768,3 @@ export default function PDFViewer({ file: initialFile, theme = 'light', onToggle
     </div>
   );
 }
-
-
-

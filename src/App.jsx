@@ -14,6 +14,9 @@ import PageNumberingTool from './components/tools/PageNumberingTool';
 import ImagesToPDFTool from './components/tools/ImagesToPDFTool';
 import PDFToImagesTool from './components/tools/PDFToImagesTool';
 import PDFSecurityModal from './components/tools/PDFSecurityModal';
+import CompressPDFTool from './components/tools/CompressPDFTool';
+import GoogleDrivePickerModal from './components/tools/GoogleDrivePickerModal';
+import SharePDFModal from './components/tools/SharePDFModal';
 import './index.css';
 
 function formatBytes(bytes, decimals = 1) {
@@ -136,6 +139,17 @@ export default function App() {
         {activeTool === 'numbering' && <PageNumberingTool onClose={() => setActiveTool(null)} />}
         {activeTool === 'img-to-pdf' && <ImagesToPDFTool onClose={() => setActiveTool(null)} />}
         {activeTool === 'pdf-to-img' && <PDFToImagesTool onClose={() => setActiveTool(null)} />}
+        {activeTool === 'compress' && <CompressPDFTool onClose={() => setActiveTool(null)} />}
+        {activeTool === 'gdrive' && (
+          <GoogleDrivePickerModal
+            onImportFile={(importedFile) => {
+              handleOpenPdf(importedFile);
+              setActiveTool(null);
+            }}
+            onClose={() => setActiveTool(null)}
+          />
+        )}
+        {activeTool === 'share' && <SharePDFModal file={file} onClose={() => setActiveTool(null)} />}
         {(activeTool === 'protect' || activeTool === 'sanitize') && (
           <PDFSecurityModal onClose={() => setActiveTool(null)} />
         )}

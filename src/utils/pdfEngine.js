@@ -1,5 +1,6 @@
 import { PDFDocument, rgb, degrees, StandardFonts } from 'pdf-lib';
 import JSZip from 'jszip';
+import { pdfjs } from 'react-pdf';
 
 /**
  * Merge multiple PDF files into one single PDF Uint8Array.
@@ -208,26 +209,63 @@ export async function tintPDFBackground(file, { color = '#fbf0d9', opacity = 0.1
   return await pdfDoc.save();
 }
 
+function toRoman(num) {
+  const lookup = { M: 1000, CM: 900, D: 500, CD: 400, C: 100, XC: 90, L: 50, XL: 40, X: 10, IX: 9, V: 5, IV: 4, I: 1 };
+  let roman = '';
+  for (let i in lookup) {
+    while (num >= lookup[i]) {
+      roman += i;
+      num -= lookup[i];
+    }
+  }
+  return roman || `${num}`;
+}
+
 /**
- * Add Page Numbers to all pages in a PDF.
- * position: 'bottom-center' | 'bottom-right' | 'top-right' | 'bottom-left'
- * format: 'number' ('1') | 'page-n' ('Page 1') | 'page-n-of-total' ('Page 1 of 12')
+ * Add Page Numbers with Advanced Book Badges and Custom Formats.
+ * position: 'bottom-center' | 'bottom-right' | 'top-right' | 'bottom-left' | 'top-center'
+ * format: 'number' | 'page-n' | 'page-n-of-total' | 'slash' | 'dash' | 'tilde' | 'chapter' | 'roman-upper' | 'roman-lower' | 'doc-ref'
+ * badgeStyle: 'none' | 'pill' | 'ribbon' | 'ring' | 'notch'
+ * badgeColor: hex color (e.g. '#0a2540')
  */
-export async function addPageNumbersToPDF(file, { position = 'bottom-center', format = 'page-n-of-total', startNumber = 1, fontSize = 10 }) {
+export async function addPageNumbersToPDF(file, {
+  position = 'bottom-center',
+  format = 'page-n-of-total',
+  badgeStyle = 'pill',
+  badgeColor = '#0a2540',
+  startNumber = 1,
+  fontSize = 10,
+}) {
   const fileBuffer = await file.arrayBuffer();
   const pdfDoc = await PDFDocument.load(fileBuffer, { ignoreEncryption: true });
-  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  const font = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+  const regularFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const pages = pdfDoc.getPages();
   const totalPages = pages.length;
+
+  const hex = badgeColor.replace('#', '');
+  const br = parseInt(hex.substring(0, 2), 16) / 255 || 0.1;
+  const bg = parseInt(hex.substring(2, 4), 16) / 255 || 0.15;
+  const bb = parseInt(hex.substring(4, 6), 16) / 255 || 0.25;
 
   pages.forEach((page, idx) => {
     const currentNum = startNumber + idx;
     let label = `${currentNum}`;
     if (format === 'page-n') label = `Page ${currentNum}`;
-    if (format === 'page-n-of-total') label = `Page ${currentNum} of ${totalPages}`;
+    else if (format === 'page-n-of-total') label = `Page ${currentNum} of ${totalPages}`;
+    else if (format === 'slash') label = `${currentNum} / ${totalPages}`;
+    else if (format === 'dash') label = `— ${currentNum} —`;
+    else if (format === 'tilde') label = `~ ${currentNum} ~`;
+    else if (format === 'chapter') label = `Page • ${currentNum}`;
+    else if (format === 'roman-upper') label = toRoman(currentNum);
+    else if (format === 'roman-lower') label = toRoman(currentNum).toLowerCase();
+    else if (format === 'doc-ref') label = `REF-DOC • ${String(currentNum).padStart(3, '0')}`;
 
     const { width, height } = page.getSize();
-    const textWidth = font.widthOfTextAtSize(label, fontSize);
+    const activeFont = badgeStyle === 'none' ? regularFont : font;
+    const textWidth = activeFont.widthOfTextAtSize(label, fontSize);
+    const textHeight = activeFont.heightAtSize(fontSize);
+
     let x = width / 2 - textWidth / 2;
     let y = 24;
 
@@ -245,16 +283,151 @@ export async function addPageNumbersToPDF(file, { position = 'bottom-center', fo
       y = height - 32;
     }
 
-    page.drawText(label, {
-      x,
-      y,
-      size: fontSize,
-      font,
-      color: rgb(0.3, 0.3, 0.3),
-    });
+    // Render Badge Backgrounds
+    if (badgeStyle === 'pill') {
+      const padX = 14;
+      const padY = 5;
+      const boxW = textWidth + padX * 2;
+      const boxH = textHeight + padY * 2;
+      page.drawRectangle({
+        x: x - padX,
+        y: y - padY + 1,
+        width: boxW,
+        height: boxH,
+        color: rgb(br, bg, bb),
+        borderRadius: boxH / 2,
+      });
+      // Text color white on filled pill
+      page.drawText(label, {
+        x,
+        y,
+        size: fontSize,
+        font: activeFont,
+        color: rgb(1, 1, 1),
+      });
+    } else if (badgeStyle === 'ribbon') {
+      const padX = 16;
+      const padY = 6;
+      page.drawRectangle({
+        x: x - padX,
+        y: y - padY,
+        width: textWidth + padX * 2,
+        height: textHeight + padY * 2,
+        color: rgb(br, bg, bb),
+        opacity: 0.15,
+      });
+      page.drawRectangle({
+        x: x - padX,
+        y: y - padY,
+        width: 3,
+        height: textHeight + padY * 2,
+        color: rgb(br, bg, bb),
+      });
+      page.drawText(label, {
+        x,
+        y,
+        size: fontSize,
+        font: activeFont,
+        color: rgb(br, bg, bb),
+      });
+    } else if (badgeStyle === 'ring') {
+      const radius = Math.max(textWidth, textHeight) / 2 + 8;
+      page.drawCircle({
+        x: x + textWidth / 2,
+        y: y + textHeight / 2 - 2,
+        size: radius,
+        color: rgb(br, bg, bb),
+        borderColor: rgb(1, 1, 1),
+        borderWidth: 1.5,
+      });
+      page.drawText(label, {
+        x,
+        y,
+        size: fontSize,
+        font: activeFont,
+        color: rgb(1, 1, 1),
+      });
+    } else if (badgeStyle === 'notch') {
+      // Sleek legal underline notch
+      page.drawRectangle({
+        x: x - 8,
+        y: y - 4,
+        width: textWidth + 16,
+        height: 2,
+        color: rgb(br, bg, bb),
+      });
+      page.drawText(label, {
+        x,
+        y,
+        size: fontSize,
+        font: activeFont,
+        color: rgb(br, bg, bb),
+      });
+    } else {
+      // Clean minimal text
+      page.drawText(label, {
+        x,
+        y,
+        size: fontSize,
+        font: regularFont,
+        color: rgb(0.25, 0.25, 0.25),
+      });
+    }
   });
 
   return await pdfDoc.save();
+}
+
+/**
+ * Compress PDF Document in browser memory (downsamples pages and optimizes image streams).
+ * level: 'low' (quality: 0.8) | 'medium' (quality: 0.55) | 'high' (quality: 0.35)
+ */
+export async function compressPDFDocument(file, { qualityLevel = 'medium' }) {
+  const qualityMap = {
+    low: { quality: 0.82, scale: 1.2 },
+    medium: { quality: 0.58, scale: 0.95 },
+    high: { quality: 0.38, scale: 0.75 },
+  };
+
+  const { quality, scale } = qualityMap[qualityLevel] || qualityMap.medium;
+
+  const fileBuffer = await file.arrayBuffer();
+  const srcPdf = await pdfjs.getDocument({ data: fileBuffer }).promise;
+  const numPages = srcPdf.numPages;
+
+  const outDoc = await PDFDocument.create();
+
+  for (let i = 1; i <= numPages; i++) {
+    const page = await srcPdf.getPage(i);
+    const viewport = page.getViewport({ scale });
+
+    const canvas = document.createElement('canvas');
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    const ctx = canvas.getContext('2d', { alpha: false });
+
+    await page.render({ canvasContext: ctx, viewport }).promise;
+
+    // Convert canvas to compressed JPEG blob
+    const dataUrl = canvas.toDataURL('image/jpeg', quality);
+    const base64Data = dataUrl.split(',')[1];
+    const binary = atob(base64Data);
+    const bytes = new Uint8Array(binary.length);
+    for (let b = 0; b < binary.length; b++) {
+      bytes[b] = binary.charCodeAt(b);
+    }
+
+    const embeddedJpg = await outDoc.embedJpg(bytes);
+    const outPage = outDoc.addPage([viewport.width / scale, viewport.height / scale]);
+    outPage.drawImage(embeddedJpg, {
+      x: 0,
+      y: 0,
+      width: viewport.width / scale,
+      height: viewport.height / scale,
+    });
+  }
+
+  return await outDoc.save();
 }
 
 /**
