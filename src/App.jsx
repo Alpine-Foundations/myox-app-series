@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   UploadCloud, File, Menu, Moon, Sun, Clock, Trash2,
-  Wand2, BookOpen, LayoutGrid, Sparkles
+  Wand2, BookOpen, LayoutGrid, Sparkles, FileText, ArrowRight
 } from 'lucide-react';
 import PDFViewer from './PDFViewer';
 import ToolsHub from './components/ToolsHub';
@@ -17,6 +17,7 @@ import PDFSecurityModal from './components/tools/PDFSecurityModal';
 import CompressPDFTool from './components/tools/CompressPDFTool';
 import GoogleDrivePickerModal from './components/tools/GoogleDrivePickerModal';
 import SharePDFModal from './components/tools/SharePDFModal';
+import { createDemoPDFDocument } from './utils/sampleDoc';
 import './index.css';
 
 function formatBytes(bytes, decimals = 1) {
@@ -30,9 +31,11 @@ function formatBytes(bytes, decimals = 1) {
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('reader'); // 'reader' | 'tools'
-  const [activeTool, setActiveTool] = useState(null); // 'merge' | 'split' | 'organize' | 'watermark' | 'numbering' | 'img-to-pdf' | 'pdf-to-img' | 'protect' | 'sanitize'
+  const [activeTool, setActiveTool] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
   const [file, setFile] = useState(null);
+  const [initialViewerTool, setInitialViewerTool] = useState(null);
+  const [initialAnnotate, setInitialAnnotate] = useState(false);
   const fileInputRef = useRef(null);
 
   const [recentFiles, setRecentFiles] = useState(() => {
@@ -59,8 +62,10 @@ export default function App() {
     setTheme(t => (t === 'dark' ? 'light' : 'dark'));
   };
 
-  const handleOpenPdf = (selectedFile) => {
+  const handleOpenPdf = (selectedFile, tool = null, annotate = false) => {
     setFile(selectedFile);
+    setInitialViewerTool(tool);
+    setInitialAnnotate(annotate);
     try {
       const newItem = {
         id: `${selectedFile.name}-${selectedFile.size}`,
@@ -76,6 +81,21 @@ export default function App() {
       });
     } catch (e) {
       console.error(e);
+    }
+  };
+
+  const handleOpenDemoDoc = async (tool = null, annotate = false) => {
+    const demoDoc = await createDemoPDFDocument();
+    handleOpenPdf(demoDoc, tool, annotate);
+  };
+
+  const handleSelectToolFromHub = async (toolId) => {
+    if (toolId === 'sign') {
+      await handleOpenDemoDoc('signature', false);
+    } else if (toolId === 'annotate') {
+      await handleOpenDemoDoc(null, true);
+    } else {
+      setActiveTool(toolId);
     }
   };
 
@@ -118,7 +138,13 @@ export default function App() {
         file={file}
         theme={theme}
         onToggleTheme={toggleTheme}
-        onClose={() => setFile(null)}
+        initialTool={initialViewerTool}
+        initialAnnotate={initialAnnotate}
+        onClose={() => {
+          setFile(null);
+          setInitialViewerTool(null);
+          setInitialAnnotate(false);
+        }}
       />
     );
   }
@@ -169,7 +195,18 @@ export default function App() {
           }}>
             A
           </div>
-          <h1 style={{ fontSize: 16, fontWeight: 600, letterSpacing: '-0.02em' }}>Alpine Document</h1>
+          <div>
+            <h1 style={{ fontSize: 16, fontWeight: 600, letterSpacing: '-0.02em', display: 'flex', alignItems: 'center', gap: 6 }}>
+              Alpine Document
+              <span style={{
+                fontSize: 10, padding: '2px 6px', borderRadius: 6,
+                background: 'rgba(0, 113, 227, 0.15)', color: 'var(--accent)',
+                fontWeight: 700, letterSpacing: '0.04em'
+              }}>
+                LAB
+              </span>
+            </h1>
+          </div>
         </div>
 
         {/* Center View Selector Tabs */}
@@ -205,32 +242,46 @@ export default function App() {
           </button>
         </div>
 
-        {/* Theme Toggle */}
-        <button
-          className="btn"
-          onClick={toggleTheme}
-          title={theme === 'dark' ? "Switch to Light Mode" : "Switch to Dark Mode"}
-          style={{
-            padding: 8,
-            borderRadius: 10,
-            background: 'var(--glass-bg)',
-            border: '1px solid var(--glass-border)',
-          }}
-        >
-          {theme === 'dark' ? (
-            <Sun size={18} color="var(--text-primary)" />
-          ) : (
-            <Moon size={18} color="var(--text-primary)" />
-          )}
-        </button>
+        {/* Right Actions: Demo doc + Theme Toggle */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <button
+            className="btn"
+            onClick={() => handleOpenDemoDoc()}
+            style={{
+              padding: '6px 12px', fontSize: 12, borderRadius: 10,
+              background: 'rgba(0, 113, 227, 0.12)', color: 'var(--accent)',
+              border: '1px solid rgba(0, 113, 227, 0.25)', fontWeight: 600, gap: 6,
+            }}
+          >
+            <Sparkles size={14} /> Test Demo PDF
+          </button>
+
+          <button
+            className="btn"
+            onClick={toggleTheme}
+            title={theme === 'dark' ? "Switch to Light Mode" : "Switch to Dark Mode"}
+            style={{
+              padding: 8,
+              borderRadius: 10,
+              background: 'var(--glass-bg)',
+              border: '1px solid var(--glass-border)',
+            }}
+          >
+            {theme === 'dark' ? (
+              <Sun size={18} color="var(--text-primary)" />
+            ) : (
+              <Moon size={18} color="var(--text-primary)" />
+            )}
+          </button>
+        </div>
       </nav>
 
       {/* Main Content Area */}
-      <main style={{ 
-        flex: 1, 
-        display: 'flex', 
+      <main style={{
+        display: 'flex',
+        flex: 1,
         flexDirection: 'column',
-        alignItems: 'center', 
+        alignItems: 'center',
         paddingTop: 90,
         paddingLeft: 20,
         paddingRight: 20,
@@ -253,7 +304,7 @@ export default function App() {
                 style={{
                   width: '100%',
                   maxWidth: 580,
-                  height: 330,
+                  padding: '36px 24px',
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
@@ -261,7 +312,8 @@ export default function App() {
                   border: isDragging ? '2px dashed var(--accent)' : '1px solid var(--glass-border)',
                   transition: 'border 0.3s ease',
                   backgroundColor: isDragging ? 'rgba(0,0,0,0.02)' : 'var(--glass-bg)',
-                  cursor: 'pointer'
+                  cursor: 'pointer',
+                  borderRadius: 20,
                 }}
                 onClick={() => fileInputRef.current?.click()}
               >
@@ -280,15 +332,39 @@ export default function App() {
                   <UploadCloud size={48} color={isDragging ? 'var(--accent)' : 'var(--text-secondary)'} strokeWidth={1.5} />
                 </motion.div>
                 
-                <h2 style={{ marginTop: 20, fontSize: 19, fontWeight: 500 }}>
+                <h2 style={{ marginTop: 18, fontSize: 20, fontWeight: 600 }}>
                   {isDragging ? 'Drop PDF here' : 'Open a PDF document'}
                 </h2>
-                <p style={{ marginTop: 6, color: 'var(--text-secondary)', fontSize: 13 }}>
-                  Drag and drop a file here, or click to browse.
+                <p style={{ marginTop: 6, color: 'var(--text-secondary)', fontSize: 13, textAlign: 'center' }}>
+                  Drag and drop any PDF here, or click to browse files locally.
                 </p>
+
+                {/* 1-Click Interactive Demo Button */}
+                <div
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleOpenDemoDoc();
+                  }}
+                  style={{
+                    marginTop: 20,
+                    padding: '10px 18px',
+                    borderRadius: 12,
+                    background: 'rgba(0, 113, 227, 0.12)',
+                    border: '1px solid rgba(0, 113, 227, 0.3)',
+                    display: 'flex', alignItems: 'center', gap: 8,
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  <Sparkles size={16} color="var(--accent)" />
+                  <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--accent)' }}>
+                    Open Sample Demo Document (1-Click Test)
+                  </span>
+                  <ArrowRight size={14} color="var(--accent)" />
+                </div>
                 
-                <div style={{ marginTop: 24, display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-secondary)' }}>
-                  <File size={13} /> Private & local. Fast GPU-accelerated rendering.
+                <div style={{ marginTop: 20, display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-secondary)' }}>
+                  <File size={13} /> 100% Client-Side Privacy: GPU-accelerated & zero server uploads.
                 </div>
               </motion.div>
             </AnimatePresence>
@@ -342,11 +418,9 @@ export default function App() {
             )}
           </div>
         ) : (
-          <ToolsHub onSelectTool={(toolId) => setActiveTool(toolId)} />
+          <ToolsHub onSelectTool={handleSelectToolFromHub} />
         )}
       </main>
     </div>
   );
 }
-
-

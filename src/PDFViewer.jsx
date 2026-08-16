@@ -292,7 +292,14 @@ const VirtualPage = memo(function VirtualPage({
   );
 });
 
-export default function PDFViewer({ file: initialFile, theme = 'light', onToggleTheme, onClose }) {
+export default function PDFViewer({
+  file: initialFile,
+  theme = 'light',
+  onToggleTheme,
+  onClose,
+  initialTool = null,
+  initialAnnotate = false,
+}) {
   const [file, setFile] = useState(initialFile);
   const [customDocName, setCustomDocName] = useState(() => initialFile?.name || 'document.pdf');
   const [isRenamingDoc, setIsRenamingDoc] = useState(false);
@@ -314,13 +321,13 @@ export default function PDFViewer({ file: initialFile, theme = 'light', onToggle
   
   // Power Tools State
   const [showToolsMenu,    setShowToolsMenu]    = useState(false);
-  const [activeViewerTool, setActiveViewerTool] = useState(null);
+  const [activeViewerTool, setActiveViewerTool] = useState(initialTool);
   const [pendingSignature, setPendingSignature] = useState(null);
   const [placedSignatures, setPlacedSignatures] = useState([]);
 
   // Annotation Studio State
-  const [isAnnotateMode,     setIsAnnotateMode]     = useState(false);
-  const [activeAnnotateTool, setActiveAnnotateTool] = useState(null); // 'pen' | 'highlighter' | 'text' | 'comment' | 'rect' | 'circle' | 'arrow'
+  const [isAnnotateMode,     setIsAnnotateMode]     = useState(initialAnnotate);
+  const [activeAnnotateTool, setActiveAnnotateTool] = useState(initialAnnotate ? 'pen' : null); // 'pen' | 'highlighter' | 'text' | 'comment' | 'rect' | 'circle' | 'arrow'
   const [annotateColor,      setAnnotateColor]      = useState('#ff0055');
   const [annotateStrokeWidth,setAnnotateStrokeWidth]= useState(3);
   const [annotateOpacity,    setAnnotateOpacity]    = useState(1.0);
