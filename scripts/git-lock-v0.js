@@ -55,6 +55,7 @@ async function run() {
     dir: rootDir,
     ref: 'v.0',
     object: sha,
+    force: true,
   });
   console.log('✓ Created tag: v.0');
 
