@@ -249,8 +249,13 @@ const VirtualPage = memo(function VirtualPage({
   );
 });
 
-// ─── Main Viewer ──────────────────────────────────────────────────────────────
-export default function PDFViewer({ file, theme = 'light', onToggleTheme, onClose }) {
+export default function PDFViewer({ file: initialFile, theme = 'light', onToggleTheme, onClose }) {
+  const [file, setFile] = useState(initialFile);
+
+  useEffect(() => {
+    setFile(initialFile);
+  }, [initialFile]);
+
   const [pdfDocument,    setPdfDocument]   = useState(null);
   const [numPages,       setNumPages]      = useState(null);
   const [scale,          setScale]         = useState(1.0);
@@ -755,22 +760,38 @@ export default function PDFViewer({ file, theme = 'light', onToggleTheme, onClos
       {/* ── Active Viewer Tool Modals ── */}
       <AnimatePresence>
         {activeViewerTool === 'organize' && (
-          <PageOrganizerModal initialFile={file} onClose={() => setActiveViewerTool(null)} />
+          <PageOrganizerModal
+            initialFile={file}
+            onClose={() => setActiveViewerTool(null)}
+            onUpdateDocument={(newFile) => { setFile(newFile); setActiveViewerTool(null); }}
+          />
         )}
         {activeViewerTool === 'split' && (
           <SplitPDFTool initialFile={file} onClose={() => setActiveViewerTool(null)} />
         )}
         {activeViewerTool === 'watermark' && (
-          <WatermarkTool initialFile={file} onClose={() => setActiveViewerTool(null)} />
+          <WatermarkTool
+            initialFile={file}
+            onClose={() => setActiveViewerTool(null)}
+            onUpdateDocument={(newFile) => { setFile(newFile); setActiveViewerTool(null); }}
+          />
         )}
         {activeViewerTool === 'numbering' && (
-          <PageNumberingTool initialFile={file} onClose={() => setActiveViewerTool(null)} />
+          <PageNumberingTool
+            initialFile={file}
+            onClose={() => setActiveViewerTool(null)}
+            onUpdateDocument={(newFile) => { setFile(newFile); setActiveViewerTool(null); }}
+          />
         )}
         {activeViewerTool === 'pdf-to-img' && (
           <PDFToImagesTool initialFile={file} onClose={() => setActiveViewerTool(null)} />
         )}
         {activeViewerTool === 'sanitize' && (
-          <PDFSecurityModal initialFile={file} onClose={() => setActiveViewerTool(null)} />
+          <PDFSecurityModal
+            initialFile={file}
+            onClose={() => setActiveViewerTool(null)}
+            onUpdateDocument={(newFile) => { setFile(newFile); setActiveViewerTool(null); }}
+          />
         )}
         {activeViewerTool === 'signature' && (
           <SignatureModal

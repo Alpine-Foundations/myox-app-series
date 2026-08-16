@@ -7,12 +7,12 @@ import {
 } from 'lucide-react';
 import { reorganizePDFPages, downloadFile } from '../../utils/pdfEngine';
 
-export default function PageOrganizerModal({ initialFile, onClose }) {
+export default function PageOrganizerModal({ initialFile, onClose, onUpdateDocument }) {
   const [file, setFile] = useState(initialFile || null);
   const [pages, setPages] = useState([]); // [{ originalIndex, rotation, id }]
   const [numPages, setNumPages] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [success, setSuccess] = useState(false);
+  const [successMsg, setSuccessMsg] = useState('');
   const fileInputRef = useRef(null);
 
   const onDocLoad = ({ numPages }) => {
@@ -69,7 +69,7 @@ export default function PageOrganizerModal({ initialFile, onClose }) {
     });
   };
 
-  const handleSave = async () => {
+  const handleSave = async (action = 'apply') => {
     if (!file || pages.length === 0) return;
     setIsProcessing(true);
     try {
@@ -78,9 +78,25 @@ export default function PageOrganizerModal({ initialFile, onClose }) {
         rotation: p.rotation,
       }));
       const reorganizedBytes = await reorganizePDFPages(file, configs);
-      downloadFile(reorganizedBytes, `organized_${file.name || 'document.pdf'}`);
-      setSuccess(true);
-      setTimeout(() => setSuccess(false), 3000);
+
+      if (action === 'download') {
+        downloadFile(reorganizedBytes, `organized_${file.name || 'document.pdf'}`);
+        setSuccessMsg('PDF Downloaded successfully!');
+      } else {
+        const newFile = new File([reorganizedBytes], file.name || 'document.pdf', {
+          type: 'application/pdf',
+          lastModified: Date.now(),
+        });
+        if (onUpdateDocument) {
+          onUpdateDocument(newFile);
+          setSuccessMsg('Applied directly to document!');
+          setTimeout(() => onClose(), 800);
+        } else {
+          downloadFile(reorganizedBytes, `organized_${file.name || 'document.pdf'}`);
+          setSuccessMsg('Saved & Downloaded!');
+        }
+      }
+      setTimeout(() => setSuccessMsg(''), 3000);
     } catch (err) {
       console.error(err);
       alert('Failed to save organized PDF. Please try again.');
@@ -259,17 +275,25 @@ export default function PageOrganizerModal({ initialFile, onClose }) {
             </span>
 
             <div style={{ display: 'flex', gap: 10 }}>
-              <button className="btn" onClick={onClose}>
+              <button className="btn" onClick={onClose} disabled={isProcessing}>
                 Cancel
+              </button>
+              <button
+                className="btn"
+                disabled={isProcessing}
+                onClick={() => handleSave('download')}
+                style={{ gap: 6 }}
+                title="Download a separate copy"
+              >
+                <Download size={15} /> Download Copy
               </button>
               <button
                 className="btn btn-primary"
                 disabled={isProcessing}
-                onClick={handleSave}
+                onClick={() => handleSave('apply')}
                 style={{ gap: 6 }}
               >
-                {success ? <CheckCircle size={16} /> : <Download size={16} />}
-                {isProcessing ? 'Saving in browser…' : success ? 'Saved & Downloaded!' : 'Save & Download PDF'}
+                {isProcessing ? 'Applying…' : 'Apply Directly to Document'}
               </button>
             </div>
           </div>

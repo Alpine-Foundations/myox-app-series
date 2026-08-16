@@ -53,33 +53,155 @@ export async function splitPDFDocument(file, selectedPageIndices) {
 }
 
 /**
- * Add custom Text Watermark across all pages in a PDF document.
+ * Add custom Text or Image Watermark across all pages in a PDF document.
+ * options:
+ *   mode: 'text' | 'image'
+ *   text: string
+ *   fontFamily: 'helvetica-bold' | 'helvetica' | 'times-bold' | 'times' | 'courier-bold' | 'courier'
+ *   opacity: number (0.05 - 1.0)
+ *   size: number (fontSize for text, scale factor 0.1 - 1.0 for image)
+ *   rotation: number (-90 to +90)
+ *   color: string (hex)
+ *   layout: 'center' | 'diagonal' | 'tile'
+ *   imageBuffer: ArrayBuffer | Uint8Array (for image mode)
+ *   imageType: 'image/png' | 'image/jpeg'
  */
-export async function addWatermarkToPDF(file, { text, opacity = 0.35, size = 48, rotation = -45, color = '#ff3b30' }) {
+export async function addWatermarkToPDF(file, {
+  mode = 'text',
+  text = 'CONFIDENTIAL',
+  fontFamily = 'helvetica-bold',
+  opacity = 0.35,
+  size = 48,
+  rotation = -45,
+  color = '#ff3b30',
+  layout = 'diagonal',
+  imageBuffer = null,
+  imageType = 'image/png',
+}) {
   const fileBuffer = await file.arrayBuffer();
   const pdfDoc = await PDFDocument.load(fileBuffer, { ignoreEncryption: true });
-  const font = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
   const pages = pdfDoc.getPages();
 
-  // Convert hex to rgb
+  if (mode === 'text') {
+    let standardFont = StandardFonts.HelveticaBold;
+    if (fontFamily === 'helvetica') standardFont = StandardFonts.Helvetica;
+    else if (fontFamily === 'times-bold') standardFont = StandardFonts.TimesRomanBold;
+    else if (fontFamily === 'times') standardFont = StandardFonts.TimesRoman;
+    else if (fontFamily === 'courier-bold') standardFont = StandardFonts.CourierBold;
+    else if (fontFamily === 'courier') standardFont = StandardFonts.Courier;
+
+    const font = await pdfDoc.embedFont(standardFont);
+
+    // Convert hex to rgb
+    const hex = color.replace('#', '');
+    const r = parseInt(hex.substring(0, 2), 16) / 255 || 0;
+    const g = parseInt(hex.substring(2, 4), 16) / 255 || 0;
+    const b = parseInt(hex.substring(4, 6), 16) / 255 || 0;
+
+    for (const page of pages) {
+      const { width, height } = page.getSize();
+      const textWidth = font.widthOfTextAtSize(text, size);
+      const textHeight = font.heightAtSize(size);
+
+      if (layout === 'tile') {
+        // Tiled repeating watermark grid
+        const stepX = Math.max(160, textWidth + 80);
+        const stepY = Math.max(120, textHeight + 80);
+        for (let x = 40; x < width; x += stepX) {
+          for (let y = 40; y < height; y += stepY) {
+            page.drawText(text, {
+              x,
+              y,
+              size: Math.max(14, size * 0.55),
+              font,
+              color: rgb(r, g, b),
+              opacity: Math.max(0.04, Math.min(1, opacity * 0.7)),
+              rotate: degrees(rotation),
+            });
+          }
+        }
+      } else {
+        // Center / Diagonal single stamp
+        page.drawText(text, {
+          x: width / 2 - textWidth / 2 + 10,
+          y: height / 2 - textHeight / 2,
+          size,
+          font,
+          color: rgb(r, g, b),
+          opacity: Math.max(0.05, Math.min(1, opacity)),
+          rotate: degrees(rotation),
+        });
+      }
+    }
+  } else if (mode === 'image' && imageBuffer) {
+    let embeddedImg;
+    if (imageType === 'image/jpeg' || imageType === 'image/jpg') {
+      embeddedImg = await pdfDoc.embedJpg(imageBuffer);
+    } else {
+      embeddedImg = await pdfDoc.embedPng(imageBuffer);
+    }
+
+    const { width: naturalW, height: naturalH } = embeddedImg;
+
+    for (const page of pages) {
+      const { width, height } = page.getSize();
+      const scaleFactor = (size / 100) * (width / (naturalW || 400));
+      const targetW = naturalW * scaleFactor;
+      const targetH = naturalH * scaleFactor;
+
+      if (layout === 'tile') {
+        const stepX = Math.max(160, targetW * 1.5);
+        const stepY = Math.max(140, targetH * 1.5);
+        for (let x = 40; x < width; x += stepX) {
+          for (let y = 40; y < height; y += stepY) {
+            page.drawImage(embeddedImg, {
+              x,
+              y,
+              width: targetW * 0.6,
+              height: targetH * 0.6,
+              opacity: Math.max(0.04, Math.min(1, opacity * 0.7)),
+              rotate: degrees(rotation),
+            });
+          }
+        }
+      } else {
+        page.drawImage(embeddedImg, {
+          x: width / 2 - targetW / 2,
+          y: height / 2 - targetH / 2,
+          width: targetW,
+          height: targetH,
+          opacity: Math.max(0.05, Math.min(1, opacity)),
+          rotate: degrees(rotation),
+        });
+      }
+    }
+  }
+
+  return await pdfDoc.save();
+}
+
+/**
+ * Tint / Shade PDF Background with faint eye-comfort colors (Sepia, Soft Mint, Rose, Lavender, etc.)
+ */
+export async function tintPDFBackground(file, { color = '#fbf0d9', opacity = 0.18 }) {
+  const fileBuffer = await file.arrayBuffer();
+  const pdfDoc = await PDFDocument.load(fileBuffer, { ignoreEncryption: true });
+  const pages = pdfDoc.getPages();
+
   const hex = color.replace('#', '');
-  const r = parseInt(hex.substring(0, 2), 16) / 255 || 0;
-  const g = parseInt(hex.substring(2, 4), 16) / 255 || 0;
-  const b = parseInt(hex.substring(4, 6), 16) / 255 || 0;
+  const r = parseInt(hex.substring(0, 2), 16) / 255 || 0.98;
+  const g = parseInt(hex.substring(2, 4), 16) / 255 || 0.94;
+  const b = parseInt(hex.substring(4, 6), 16) / 255 || 0.85;
 
   for (const page of pages) {
     const { width, height } = page.getSize();
-    const textWidth = font.widthOfTextAtSize(text, size);
-    const textHeight = font.heightAtSize(size);
-
-    page.drawText(text, {
-      x: width / 2 - textWidth / 2 + 10,
-      y: height / 2 - textHeight / 2,
-      size,
-      font,
+    page.drawRectangle({
+      x: 0,
+      y: 0,
+      width,
+      height,
       color: rgb(r, g, b),
-      opacity: Math.max(0.05, Math.min(1, opacity)),
-      rotate: degrees(rotation),
+      opacity: Math.max(0.05, Math.min(0.5, opacity)),
     });
   }
 
