@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Document, Page, pdfjs } from 'react-pdf';
-import { Scissors, UploadCloud, Download, X, CheckSquare, Square, CheckCircle } from 'lucide-react';
-import { splitPDFDocument, downloadFile } from '../../utils/pdfEngine';
+import { Scissors, UploadCloud, Download, X, CheckSquare, Square, CheckCircle, FileImage } from 'lucide-react';
+import { splitPDFDocument, exportSelectedPagesAsImagesZip, downloadFile } from '../../utils/pdfEngine';
 
 export default function SplitPDFTool({ initialFile, onClose }) {
   const [file, setFile] = useState(initialFile || null);
@@ -11,6 +11,7 @@ export default function SplitPDFTool({ initialFile, onClose }) {
   const [rangeInput, setRangeInput] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [successMsg, setSuccessMsg] = useState('');
   const fileInputRef = useRef(null);
 
   const onDocLoad = ({ numPages }) => {
@@ -69,7 +70,7 @@ export default function SplitPDFTool({ initialFile, onClose }) {
     setSelectedPages(newSelected);
   };
 
-  const handleExtract = async () => {
+  const handleExtract = async (format = 'pdf') => {
     if (!file || selectedPages.size === 0) {
       alert('Please select at least one page to extract.');
       return;
@@ -78,13 +79,24 @@ export default function SplitPDFTool({ initialFile, onClose }) {
     setIsProcessing(true);
     try {
       const sortedIndices = Array.from(selectedPages).sort((a, b) => a - b);
-      const splitBytes = await splitPDFDocument(file, sortedIndices);
-      downloadFile(splitBytes, `extracted_${file.name || 'document.pdf'}`);
+      if (format === 'png-zip') {
+        const zipBlob = await exportSelectedPagesAsImagesZip(file, sortedIndices);
+        const baseName = (file.name || 'document').replace(/\.pdf$/i, '');
+        downloadFile(zipBlob, `extracted_png_pages_${baseName}.zip`, 'application/zip');
+        setSuccessMsg('PNG ZIP Downloaded!');
+      } else {
+        const splitBytes = await splitPDFDocument(file, sortedIndices);
+        downloadFile(splitBytes, `extracted_${file.name || 'document.pdf'}`);
+        setSuccessMsg('PDF Downloaded!');
+      }
       setSuccess(true);
-      setTimeout(() => setSuccess(false), 3000);
+      setTimeout(() => {
+        setSuccess(false);
+        setSuccessMsg('');
+      }, 3000);
     } catch (err) {
       console.error(err);
-      alert('Failed to extract pages. Please try again.');
+      alert('Failed to extract pages: ' + err.message);
     } finally {
       setIsProcessing(false);
     }
@@ -261,17 +273,26 @@ export default function SplitPDFTool({ initialFile, onClose }) {
             </span>
 
             <div style={{ display: 'flex', gap: 10 }}>
-              <button className="btn" onClick={onClose}>
+              <button className="btn" onClick={onClose} disabled={isProcessing}>
                 Cancel
+              </button>
+              <button
+                className="btn"
+                disabled={selectedPages.size === 0 || isProcessing}
+                onClick={() => handleExtract('png-zip')}
+                style={{ gap: 6, opacity: selectedPages.size === 0 ? 0.5 : 1 }}
+                title="Download extracted pages as individual high-res PNG images"
+              >
+                <FileImage size={15} color="#30b0c7" /> Download as PNGs (ZIP)
               </button>
               <button
                 className="btn btn-primary"
                 disabled={selectedPages.size === 0 || isProcessing}
-                onClick={handleExtract}
+                onClick={() => handleExtract('pdf')}
                 style={{ gap: 6, opacity: selectedPages.size === 0 ? 0.5 : 1 }}
               >
                 {success ? <CheckCircle size={16} /> : <Download size={16} />}
-                {isProcessing ? 'Extracting…' : success ? 'Extracted & Saved!' : 'Extract & Download PDF'}
+                {isProcessing ? 'Extracting…' : success ? successMsg : 'Extract & Download PDF'}
               </button>
             </div>
           </div>

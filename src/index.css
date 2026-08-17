@@ -138,9 +138,24 @@ body {
   flex-direction: column;
 }
 
-/* ── PDF Invert / Dark Mode Filter ── */
-.pdf-dark-mode canvas {
-  filter: invert(0.92) hue-rotate(180deg) contrast(0.95);
+/* ── PDF Reading Mode Shaders ── */
+.pdf-shader-paper canvas {
+  filter: none !important;
+}
+.pdf-shader-inverted canvas {
+  filter: invert(0.96) hue-rotate(180deg) contrast(1.15) brightness(0.92);
+  transition: filter 0.2s ease;
+}
+.pdf-shader-sepia canvas {
+  filter: sepia(0.38) contrast(0.96) brightness(0.96);
+  transition: filter 0.2s ease;
+}
+.pdf-shader-mint canvas {
+  filter: hue-rotate(80deg) saturate(0.7) brightness(0.96);
+  transition: filter 0.2s ease;
+}
+.pdf-shader-slate canvas {
+  filter: saturate(0.2) contrast(1.05) brightness(0.92);
   transition: filter 0.2s ease;
 }
 

@@ -61,6 +61,7 @@ export default function WatermarkTool({ initialFile, onClose, onUpdateDocument }
   const [imageScale, setImageScale] = useState(50);
   const [imageRotation, setImageRotation] = useState(0);
   const [imageLayout, setImageLayout] = useState('diagonal'); // 'diagonal' | 'tile'
+  const [gridSpacing, setGridSpacing] = useState(140); // distance in pixels between repeating watermarks
   const imgInputRef = useRef(null);
 
   // Background Tint State
@@ -105,20 +106,44 @@ export default function WatermarkTool({ initialFile, onClose, onUpdateDocument }
           opacity: tintOpacity,
         });
       } else if (activeTab === 'image') {
-        if (!imageFile) {
+        if (!imageFile || !imagePreview) {
           alert('Please select an image file for the watermark.');
           setIsProcessing(false);
           return;
         }
-        const imgBuffer = await imageFile.arrayBuffer();
+
+        // Convert image via Canvas to guarantee 100% valid standard PNG bytes
+        const img = new window.Image();
+        img.crossOrigin = 'anonymous';
+        img.src = imagePreview;
+        await new Promise((resolve, reject) => {
+          img.onload = resolve;
+          img.onerror = () => reject(new Error('Failed to load image preview.'));
+        });
+
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth || img.width || 400;
+        canvas.height = img.naturalHeight || img.height || 400;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+
+        const dataUrl = canvas.toDataURL('image/png');
+        const base64Data = dataUrl.split(',')[1];
+        const binary = atob(base64Data);
+        const imgBytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) {
+          imgBytes[i] = binary.charCodeAt(i);
+        }
+
         outputBytes = await addWatermarkToPDF(file, {
           mode: 'image',
-          imageBuffer: imgBuffer,
-          imageType: imageFile.type,
+          imageBuffer: imgBytes,
+          imageType: 'image/png',
           opacity: imageOpacity,
           size: imageScale,
           rotation: imageRotation,
           layout: imageLayout,
+          gridSpacing,
         });
       } else {
         // Text Watermark
@@ -136,6 +161,7 @@ export default function WatermarkTool({ initialFile, onClose, onUpdateDocument }
           rotation,
           color,
           layout,
+          gridSpacing,
         });
       }
 
@@ -339,7 +365,7 @@ export default function WatermarkTool({ initialFile, onClose, onUpdateDocument }
               </div>
 
               {/* Controls: Opacity, Size & Rotation */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, background: 'var(--glass-bg)', padding: 14, borderRadius: 12, border: '1px solid var(--glass-border)' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: layout === 'tile' ? '1fr 1fr 1fr 1fr' : '1fr 1fr 1fr', gap: 12, background: 'var(--glass-bg)', padding: 14, borderRadius: 12, border: '1px solid var(--glass-border)' }}>
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-secondary)', marginBottom: 4 }}>
                     <span>Opacity</span>
@@ -387,6 +413,24 @@ export default function WatermarkTool({ initialFile, onClose, onUpdateDocument }
                     style={{ width: '100%' }}
                   />
                 </div>
+
+                {layout === 'tile' && (
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-secondary)', marginBottom: 4 }}>
+                      <span>Grid Spacing</span>
+                      <span>{gridSpacing}px</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="60"
+                      max="320"
+                      step="10"
+                      value={gridSpacing}
+                      onChange={e => setGridSpacing(parseInt(e.target.value, 10))}
+                      style={{ width: '100%' }}
+                    />
+                  </div>
+                )}
               </div>
 
               {/* Custom Color Palette & Hex */}
@@ -489,7 +533,7 @@ export default function WatermarkTool({ initialFile, onClose, onUpdateDocument }
                   </div>
 
                   {/* Image Controls */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, background: 'var(--glass-bg)', padding: 14, borderRadius: 12, border: '1px solid var(--glass-border)' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: imageLayout === 'tile' ? '1fr 1fr 1fr 1fr' : '1fr 1fr 1fr', gap: 12, background: 'var(--glass-bg)', padding: 14, borderRadius: 12, border: '1px solid var(--glass-border)' }}>
                     <div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-secondary)', marginBottom: 4 }}>
                         <span>Opacity</span>
@@ -537,6 +581,24 @@ export default function WatermarkTool({ initialFile, onClose, onUpdateDocument }
                         style={{ width: '100%' }}
                       />
                     </div>
+
+                    {imageLayout === 'tile' && (
+                      <div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-secondary)', marginBottom: 4 }}>
+                          <span>Grid Spacing</span>
+                          <span>{gridSpacing}px</span>
+                        </div>
+                        <input
+                          type="range"
+                          min="60"
+                          max="320"
+                          step="10"
+                          value={gridSpacing}
+                          onChange={e => setGridSpacing(parseInt(e.target.value, 10))}
+                          style={{ width: '100%' }}
+                        />
+                      </div>
+                    )}
                   </div>
 
                   {/* Image Layout */}

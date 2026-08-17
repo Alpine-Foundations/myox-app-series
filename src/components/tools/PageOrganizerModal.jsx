@@ -1,18 +1,25 @@
 import { useState, useRef } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Document, Page } from 'react-pdf';
 import {
   LayoutGrid, RotateCw, Trash2, Copy, ArrowLeft, ArrowRight,
-  Download, X, CheckCircle, UploadCloud
+  Download, X, CheckCircle, UploadCloud, MessageSquare, PenTool, Check, Sparkles
 } from 'lucide-react';
 import { reorganizePDFPages, downloadFile } from '../../utils/pdfEngine';
 
-export default function PageOrganizerModal({ initialFile, onClose, onUpdateDocument }) {
+export default function PageOrganizerModal({
+  initialFile,
+  currentAnnotations = [],
+  currentSignatures = [],
+  onClose,
+  onUpdateDocument,
+}) {
   const [file, setFile] = useState(initialFile || null);
-  const [pages, setPages] = useState([]); // [{ originalIndex, rotation, id }]
+  const [pages, setPages] = useState([]); // [{ originalIndex, rotation, id, annotations, signatures }]
   const [numPages, setNumPages] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
+  const [duplicatePromptIndex, setDuplicatePromptIndex] = useState(null);
   const fileInputRef = useRef(null);
 
   const onDocLoad = ({ numPages }) => {
@@ -22,6 +29,8 @@ export default function PageOrganizerModal({ initialFile, onClose, onUpdateDocum
         originalIndex: i,
         rotation: 0,
         id: `page-${i}-${Date.now()}`,
+        annotations: (currentAnnotations || []).filter(a => a.pageNumber === i + 1),
+        signatures: (currentSignatures || []).filter(s => s.pageNumber === i + 1),
       }))
     );
   };
@@ -45,16 +54,43 @@ export default function PageOrganizerModal({ initialFile, onClose, onUpdateDocum
     setPages(prev => prev.filter((_, i) => i !== index));
   };
 
-  const duplicatePage = (index) => {
+  const handleDuplicateClick = (index) => {
+    const target = pages[index];
+    if (target.annotations.length > 0 || target.signatures.length > 0) {
+      setDuplicatePromptIndex(index);
+    } else {
+      executeDuplicate(index, false);
+    }
+  };
+
+  const executeDuplicate = (index, includeAnnotations) => {
     setPages(prev => {
       const copy = [...prev];
       const target = copy[index];
+
+      const clonedAnnotations = includeAnnotations
+        ? target.annotations.map(a => ({
+            ...a,
+            id: `ann-dup-${Date.now()}-${Math.random()}`,
+          }))
+        : [];
+
+      const clonedSignatures = includeAnnotations
+        ? target.signatures.map(s => ({
+            ...s,
+            id: `sig-dup-${Date.now()}-${Math.random()}`,
+          }))
+        : [];
+
       copy.splice(index + 1, 0, {
         ...target,
         id: `page-copy-${Date.now()}-${Math.random()}`,
+        annotations: clonedAnnotations,
+        signatures: clonedSignatures,
       });
       return copy;
     });
+    setDuplicatePromptIndex(null);
   };
 
   const movePage = (index, direction) => {
@@ -79,6 +115,30 @@ export default function PageOrganizerModal({ initialFile, onClose, onUpdateDocum
       }));
       const reorganizedBytes = await reorganizePDFPages(file, configs);
 
+      // Re-map annotations and signatures to their new page positions
+      const updatedAnnotations = [];
+      const updatedSignatures = [];
+
+      pages.forEach((pageItem, newPageIndex) => {
+        const newPageNum = newPageIndex + 1;
+        if (pageItem.annotations) {
+          pageItem.annotations.forEach(ann => {
+            updatedAnnotations.push({
+              ...ann,
+              pageNumber: newPageNum,
+            });
+          });
+        }
+        if (pageItem.signatures) {
+          pageItem.signatures.forEach(sig => {
+            updatedSignatures.push({
+              ...sig,
+              pageNumber: newPageNum,
+            });
+          });
+        }
+      });
+
       if (action === 'download') {
         downloadFile(reorganizedBytes, `organized_${file.name || 'document.pdf'}`);
         setSuccessMsg('PDF Downloaded successfully!');
@@ -88,7 +148,10 @@ export default function PageOrganizerModal({ initialFile, onClose, onUpdateDocum
           lastModified: Date.now(),
         });
         if (onUpdateDocument) {
-          onUpdateDocument(newFile);
+          onUpdateDocument(newFile, {
+            updatedAnnotations,
+            updatedSignatures,
+          });
           setSuccessMsg('Applied directly to document!');
           setTimeout(() => onClose(), 800);
         } else {
@@ -99,7 +162,7 @@ export default function PageOrganizerModal({ initialFile, onClose, onUpdateDocum
       setTimeout(() => setSuccessMsg(''), 3000);
     } catch (err) {
       console.error(err);
-      alert('Failed to save organized PDF. Please try again.');
+      alert('Failed to save organized PDF: ' + err.message);
     } finally {
       setIsProcessing(false);
     }
@@ -122,6 +185,7 @@ export default function PageOrganizerModal({ initialFile, onClose, onUpdateDocum
           background: 'var(--bg-color)', borderRadius: 20,
           border: '1px solid var(--glass-border)', boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
           overflow: 'hidden',
+          position: 'relative',
         }}
       >
         {/* Header */}
@@ -135,7 +199,7 @@ export default function PageOrganizerModal({ initialFile, onClose, onUpdateDocum
             </div>
             <div>
               <h3 style={{ fontSize: 16, fontWeight: 600 }}>Visual Page Organizer</h3>
-              <p style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Reorder, rotate, duplicate, or delete individual pages visually</p>
+              <p style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Reorder, rotate, duplicate, or delete pages visually with full annotation tracking</p>
             </div>
           </div>
           <button className="btn" onClick={onClose} style={{ padding: 6 }}>
@@ -143,13 +207,13 @@ export default function PageOrganizerModal({ initialFile, onClose, onUpdateDocum
           </button>
         </div>
 
-        {/* Main Content */}
-        <div style={{ padding: 20, overflowY: 'auto', flex: 1 }}>
+        {/* Content */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: 20 }}>
           {!file ? (
             <div
               onClick={() => fileInputRef.current?.click()}
               style={{
-                padding: '48px 16px', borderRadius: 14,
+                height: '100%', borderRadius: 14,
                 border: '2px dashed var(--glass-border)',
                 display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                 cursor: 'pointer', background: 'var(--glass-bg)',
@@ -163,106 +227,207 @@ export default function PageOrganizerModal({ initialFile, onClose, onUpdateDocum
                 onChange={e => e.target.files?.[0] && setFile(e.target.files[0])}
               />
               <UploadCloud size={40} color="#34c759" />
-              <span style={{ fontSize: 15, fontWeight: 500, marginTop: 12 }}>Open a PDF to Organize</span>
-              <span style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>Click to browse or drop file</span>
+              <span style={{ fontSize: 14, fontWeight: 500, marginTop: 12 }}>Upload a PDF to Organize Pages</span>
+              <span style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4 }}>Drag & drop or browse</span>
             </div>
           ) : (
-            <Document file={file} onLoadSuccess={onDocLoad}>
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
-                gap: 16,
-              }}>
-                {pages.map((p, idx) => (
-                  <div
-                    key={p.id}
-                    className="glass-panel"
-                    style={{
-                      padding: 8,
-                      borderRadius: 12,
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      background: 'var(--glass-bg)',
-                      border: '1px solid var(--glass-border)',
-                      position: 'relative',
-                    }}
-                  >
-                    {/* Page Thumbnail */}
-                    <div style={{
-                      width: '100%', height: 180,
-                      borderRadius: 6, overflow: 'hidden',
-                      background: '#ffffff', boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    }}>
-                      <Page
-                        pageNumber={p.originalIndex + 1}
-                        rotate={p.rotation}
-                        width={140}
-                        renderTextLayer={false}
-                        renderAnnotationLayer={false}
-                      />
-                    </div>
-
-                    {/* Page Number Label */}
-                    <div style={{ margin: '8px 0 4px', fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>
-                      Page {idx + 1} {p.originalIndex !== idx && <span style={{ color: 'var(--text-secondary)', fontWeight: 400 }}>(orig. {p.originalIndex + 1})</span>}
-                    </div>
-
-                    {/* Action Bar */}
-                    <div style={{
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      gap: 4, width: '100%', paddingTop: 6, borderTop: '1px solid var(--glass-border)',
-                    }}>
-                      <button
-                        className="btn"
-                        disabled={idx === 0}
-                        onClick={() => movePage(idx, -1)}
-                        style={{ padding: 4, opacity: idx === 0 ? 0.3 : 1 }}
-                        title="Move Left"
-                      >
-                        <ArrowLeft size={13} />
-                      </button>
-                      <button
-                        className="btn"
-                        onClick={() => rotatePage(idx)}
-                        style={{ padding: 4 }}
-                        title="Rotate 90° Clockwise"
-                      >
-                        <RotateCw size={13} />
-                      </button>
-                      <button
-                        className="btn"
-                        onClick={() => duplicatePage(idx)}
-                        style={{ padding: 4 }}
-                        title="Duplicate Page"
-                      >
-                        <Copy size={13} />
-                      </button>
-                      <button
-                        className="btn"
-                        disabled={idx === pages.length - 1}
-                        onClick={() => movePage(idx, 1)}
-                        style={{ padding: 4, opacity: idx === pages.length - 1 ? 0.3 : 1 }}
-                        title="Move Right"
-                      >
-                        <ArrowRight size={13} />
-                      </button>
-                      <button
-                        className="btn"
-                        onClick={() => deletePage(idx)}
-                        style={{ padding: 4, color: '#ff3b30' }}
-                        title="Delete Page"
-                      >
-                        <Trash2 size={13} />
-                      </button>
-                    </div>
+            <div>
+              <Document
+                file={file}
+                onLoadSuccess={onDocLoad}
+                loading={
+                  <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-secondary)' }}>
+                    Loading light table…
                   </div>
-                ))}
-              </div>
-            </Document>
+                }
+              >
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))',
+                  gap: 16,
+                }}>
+                  {pages.map((p, idx) => {
+                    const annCount = p.annotations?.length || 0;
+                    const sigCount = p.signatures?.length || 0;
+                    return (
+                      <div
+                        key={p.id}
+                        style={{
+                          background: 'var(--glass-bg)',
+                          border: '1px solid var(--glass-border)',
+                          borderRadius: 12,
+                          padding: 10,
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          position: 'relative',
+                        }}
+                      >
+                        {/* Page Preview Thumbnail */}
+                        <div style={{
+                          width: 140, height: 180,
+                          borderRadius: 6, overflow: 'hidden',
+                          background: '#ffffff',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                          position: 'relative',
+                        }}>
+                          <Page
+                            pageNumber={p.originalIndex + 1}
+                            width={140}
+                            rotate={p.rotation}
+                            renderTextLayer={false}
+                            renderAnnotationLayer={false}
+                          />
+
+                          {/* Annotation badges overlay */}
+                          {(annCount > 0 || sigCount > 0) && (
+                            <div style={{
+                              position: 'absolute', top: 4, right: 4,
+                              display: 'flex', gap: 4,
+                            }}>
+                              {annCount > 0 && (
+                                <span style={{
+                                  fontSize: 9, padding: '2px 5px', borderRadius: 4,
+                                  background: 'rgba(0, 113, 227, 0.9)', color: '#ffffff',
+                                  fontWeight: 600, display: 'flex', alignItems: 'center', gap: 2,
+                                }} title={`${annCount} annotation(s)`}>
+                                  <MessageSquare size={9} /> {annCount}
+                                </span>
+                              )}
+                              {sigCount > 0 && (
+                                <span style={{
+                                  fontSize: 9, padding: '2px 5px', borderRadius: 4,
+                                  background: 'rgba(175, 82, 222, 0.9)', color: '#ffffff',
+                                  fontWeight: 600, display: 'flex', alignItems: 'center', gap: 2,
+                                }} title={`${sigCount} signature(s)`}>
+                                  <PenTool size={9} /> {sigCount}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Page Number & Rotation Label */}
+                        <div style={{
+                          marginTop: 8, display: 'flex', justifyContent: 'space-between',
+                          width: '100%', padding: '0 4px', fontSize: 11, color: 'var(--text-secondary)',
+                        }}>
+                          <span style={{ fontWeight: 600 }}>Page {idx + 1}</span>
+                          {p.rotation !== 0 && (
+                            <span style={{ color: 'var(--accent)', fontWeight: 600 }}>{p.rotation}°</span>
+                          )}
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div style={{ display: 'flex', gap: 4, marginTop: 8, width: '100%', justifyContent: 'center' }}>
+                          <button
+                            className="btn"
+                            disabled={idx === 0}
+                            onClick={() => movePage(idx, -1)}
+                            style={{ padding: 4, opacity: idx === 0 ? 0.3 : 1 }}
+                            title="Move Left"
+                          >
+                            <ArrowLeft size={13} />
+                          </button>
+                          <button
+                            className="btn"
+                            onClick={() => rotatePage(idx)}
+                            style={{ padding: 4 }}
+                            title="Rotate 90° Clockwise"
+                          >
+                            <RotateCw size={13} />
+                          </button>
+                          <button
+                            className="btn"
+                            onClick={() => handleDuplicateClick(idx)}
+                            style={{ padding: 4 }}
+                            title="Duplicate Page"
+                          >
+                            <Copy size={13} />
+                          </button>
+                          <button
+                            className="btn"
+                            disabled={idx === pages.length - 1}
+                            onClick={() => movePage(idx, 1)}
+                            style={{ padding: 4, opacity: idx === pages.length - 1 ? 0.3 : 1 }}
+                            title="Move Right"
+                          >
+                            <ArrowRight size={13} />
+                          </button>
+                          <button
+                            className="btn"
+                            onClick={() => deletePage(idx)}
+                            style={{ padding: 4, color: '#ff3b30' }}
+                            title="Delete Page"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </Document>
+            </div>
           )}
         </div>
+
+        {/* ── Duplicate Choice Prompt Modal ── */}
+        <AnimatePresence>
+          {duplicatePromptIndex !== null && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              style={{
+                position: 'absolute', inset: 0, zIndex: 50,
+                background: 'rgba(0, 0, 0, 0.65)', backdropFilter: 'blur(8px)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
+              }}
+            >
+              <div
+                className="glass-panel"
+                style={{
+                  width: '100%', maxWidth: 420, padding: 20, borderRadius: 16,
+                  background: 'var(--bg-color)', border: '1px solid var(--glass-border)',
+                  boxShadow: '0 16px 40px rgba(0,0,0,0.3)', display: 'flex', flexDirection: 'column', gap: 14,
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Sparkles size={18} color="var(--accent)" />
+                  <h4 style={{ fontSize: 15, fontWeight: 600 }}>Duplicate Page {duplicatePromptIndex + 1}</h4>
+                </div>
+                <p style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                  This page contains annotations or signatures. How would you like to duplicate this page?
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <button
+                    className="btn btn-primary"
+                    onClick={() => executeDuplicate(duplicatePromptIndex, true)}
+                    style={{ padding: '10px 14px', fontSize: 13, gap: 8, justifyContent: 'center' }}
+                  >
+                    <Check size={16} /> Duplicate with Current Annotations & Stamps
+                  </button>
+                  <button
+                    className="btn"
+                    onClick={() => executeDuplicate(duplicatePromptIndex, false)}
+                    style={{ padding: '10px 14px', fontSize: 13, justifyContent: 'center' }}
+                  >
+                    Duplicate Blank Original Page Only
+                  </button>
+                  <button
+                    className="btn"
+                    onClick={() => setDuplicatePromptIndex(null)}
+                    style={{ padding: '6px 12px', fontSize: 12, color: 'var(--text-secondary)', justifyContent: 'center' }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Footer */}
         {file && (

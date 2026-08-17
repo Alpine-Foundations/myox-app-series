@@ -138,7 +138,7 @@ const VirtualPage = memo(function VirtualPage({
   scale,
   rotation,
   pageWidth,
-  isDarkMode,
+  readingShader = 'paper',
   searchQuery,
   activeMatch,
   placedSignatures,
@@ -206,7 +206,7 @@ const VirtualPage = memo(function VirtualPage({
       {inRange ? (
         <>
           <div
-            className={isDarkMode ? 'pdf-dark-mode' : ''}
+            className={`pdf-shader-${readingShader}`}
             style={{
               boxShadow: '0 2px 24px rgba(0,0,0,0.10)',
               borderRadius: 4,
@@ -347,6 +347,10 @@ export default function PDFViewer({
   const [selectionBox,   setSelectionBox]  = useState(null);
   const [selectedText,   setSelectedText]  = useState('');
   const [copiedToast,    setCopiedToast]   = useState(false);
+
+  // Document Reading Shader (Independent of App UI Theme)
+  const [readingShader,    setReadingShader]    = useState('paper'); // 'paper' | 'inverted' | 'sepia' | 'mint' | 'slate'
+  const [showReadingMenu,  setShowReadingMenu]  = useState(false);
 
   const [isDarkMode,     setIsDarkMode]    = useState(() => theme === 'dark');
   const [isFullscreen,   setIsFullscreen]  = useState(false);
@@ -916,10 +920,15 @@ export default function PDFViewer({
         {activeViewerTool === 'organize' && (
           <PageOrganizerModal
             initialFile={file}
+            currentAnnotations={annotations}
+            currentSignatures={placedSignatures}
             onClose={() => setActiveViewerTool(null)}
-            onUpdateDocument={(newFile) => {
+            onUpdateDocument={(newFile, meta) => {
               recordSnapshot();
+              heightCache.current = {};
               setFile(newFile);
+              if (meta?.updatedAnnotations) setAnnotations(meta.updatedAnnotations);
+              if (meta?.updatedSignatures) setPlacedSignatures(meta.updatedSignatures);
               setActiveViewerTool(null);
             }}
           />
@@ -1509,8 +1518,67 @@ export default function PDFViewer({
             <RotateCw size={15} color="var(--text-secondary)" />
           </button>
 
-          {/* Invert Dark / Light Mode */}
-          <button className="btn" onClick={handleToggleDarkMode} title="Toggle Dark/Light Mode" style={{ padding: 5 }}>
+          {/* Reading Paper Shader Switcher */}
+          <div style={{ position: 'relative' }}>
+            <button
+              className="btn"
+              onClick={() => setShowReadingMenu(v => !v)}
+              title="Page Reading Tone & Shaders (Eye-Care Sepia, Mint, Night)"
+              style={{
+                padding: 5,
+                background: readingShader !== 'paper' ? 'var(--accent)' : 'transparent',
+                color: readingShader !== 'paper' ? 'var(--bg-color)' : 'var(--text-secondary)',
+                borderRadius: 6,
+              }}
+            >
+              <Eye size={15} />
+            </button>
+
+            <AnimatePresence>
+              {showReadingMenu && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95, y: 8 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95, y: 8 }}
+                  className="glass-panel"
+                  style={{
+                    position: 'absolute', right: -20, top: 38, width: 210,
+                    borderRadius: 12, padding: 6, zIndex: 200,
+                    background: 'var(--bg-color)', border: '1px solid var(--glass-border)',
+                    boxShadow: '0 12px 36px rgba(0,0,0,0.25)',
+                    display: 'flex', flexDirection: 'column', gap: 2,
+                  }}
+                >
+                  <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', padding: '4px 8px' }}>
+                    Document Paper Shader:
+                  </span>
+                  {[
+                    { id: 'paper', label: '☀️ Natural Crisp Paper', desc: 'Standard original colors' },
+                    { id: 'sepia', label: '📖 Warm Sepia', desc: 'Relaxing book page' },
+                    { id: 'mint', label: '🌿 Soft Mint Tone', desc: 'Reduces visual fatigue' },
+                    { id: 'slate', label: '🌫️ Cool Slate', desc: 'Soft grayscale tone' },
+                    { id: 'inverted', label: '🌙 Midnight Inverted', desc: 'OLED dark night reading' },
+                  ].map(s => (
+                    <button
+                      key={s.id}
+                      className="btn"
+                      onClick={() => { setReadingShader(s.id); setShowReadingMenu(false); }}
+                      style={{
+                        justifyContent: 'flex-start', padding: '6px 8px', fontSize: 12, borderRadius: 6,
+                        background: readingShader === s.id ? 'var(--glass-border)' : 'transparent',
+                        fontWeight: readingShader === s.id ? 600 : 400,
+                      }}
+                    >
+                      {s.label}
+                    </button>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* App Dark / Light Mode Toggle */}
+          <button className="btn" onClick={handleToggleDarkMode} title="Toggle App Theme (Dark/Light)" style={{ padding: 5 }}>
             {isDarkMode ? <Sun size={15} color="var(--text-secondary)" /> : <Moon size={15} color="var(--text-secondary)" />}
           </button>
 
@@ -1747,7 +1815,7 @@ export default function PDFViewer({
                       scale={scale}
                       rotation={rotation}
                       pageWidth={pageWidth}
-                      isDarkMode={isDarkMode}
+                      readingShader={readingShader}
                       searchQuery={searchQuery}
                       activeMatch={activeMatch}
                       placedSignatures={placedSignatures}

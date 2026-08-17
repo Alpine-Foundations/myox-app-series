@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   PenTool, Type, Stamp, UploadCloud, Trash2, Check, X, RotateCw,
-  Sparkles, Sliders, Palette, FileImage, ShieldCheck, Undo2
+  Sparkles, Sliders, Palette, FileImage, ShieldCheck, Undo2, Crop, Circle, Square
 } from 'lucide-react';
 
 const GOOGLE_SIGNATURE_FONTS = [
@@ -33,6 +33,13 @@ const UNDERLINE_STYLES = [
   { id: 'dashed', label: 'Dashed' },
 ];
 
+const CROP_FRAMES = [
+  { id: 'none', label: 'Full Image', icon: Crop },
+  { id: 'circle', label: 'Circular Seal', icon: Circle },
+  { id: 'oval', label: 'Oval Stamp', icon: Circle },
+  { id: 'rect', label: 'Rectangle Box', icon: Square },
+];
+
 export default function SignatureModal({ onSaveSignature, onClose }) {
   const [activeTab, setActiveTab] = useState('draw'); // 'draw' | 'type' | 'stamp'
 
@@ -41,23 +48,27 @@ export default function SignatureModal({ onSaveSignature, onClose }) {
   const [hexInput, setHexInput] = useState('#000000');
 
   // Draw State
-  const [strokeWidth, setStrokeWidth] = useState(2.8);
+  const [strokeWidth, setStrokeWidth] = useState(3.2);
   const [strokes, setStrokes] = useState([]); // [[{x, y}], ...]
   const canvasRef = useRef(null);
   const isDrawingRef = useRef(false);
 
-  // Type Signature State
+  // Type Signature State (Extra Large Prominent Font Size)
   const [typedName, setTypedName] = useState('Alexander Wright');
   const [selectedFont, setSelectedFont] = useState(GOOGLE_SIGNATURE_FONTS[0].id);
-  const [fontSize, setFontSize] = useState(48);
+  const [fontSize, setFontSize] = useState(68);
   const [angle, setAngle] = useState(-3); // -30 to +30 deg
   const [underlineStyle, setUnderlineStyle] = useState('swash');
 
-  // Stamp / Image State
+  // Stamp / Image Seal State & Frame Crop
   const [stampImage, setStampImage] = useState(null); // Image object or dataUrl
   const [removeBg, setRemoveBg] = useState(true);
   const [stampOpacity, setStampOpacity] = useState(1.0);
   const [stampColorMode, setStampColorMode] = useState('original'); // 'original' | 'ink'
+  const [cropFrame, setCropFrame] = useState('none'); // 'none' | 'circle' | 'oval' | 'rect'
+  const [cropScale, setCropScale] = useState(85); // 20 - 100%
+  const [cropOffsetX, setCropOffsetX] = useState(0); // -50 to +50
+  const [cropOffsetY, setCropOffsetY] = useState(0); // -50 to +50
   const stampInputRef = useRef(null);
 
   // Sync color with hexInput
@@ -164,15 +175,16 @@ export default function SignatureModal({ onSaveSignature, onClose }) {
     if (activeTab === 'draw') {
       if (strokes.length === 0) return;
       const srcCanvas = canvasRef.current;
-      outCanvas.width = srcCanvas.width;
-      outCanvas.height = srcCanvas.height;
+      outCanvas.width = srcCanvas.width * 2;
+      outCanvas.height = srcCanvas.height * 2;
       const ctx = outCanvas.getContext('2d');
+      ctx.scale(2, 2);
       ctx.drawImage(srcCanvas, 0, 0);
       onSaveSignature(outCanvas.toDataURL('image/png'));
     } else if (activeTab === 'type') {
       if (!typedName.trim()) return;
-      outCanvas.width = 600;
-      outCanvas.height = 240;
+      outCanvas.width = 900;
+      outCanvas.height = 360;
       const ctx = outCanvas.getContext('2d');
 
       ctx.save();
@@ -180,7 +192,7 @@ export default function SignatureModal({ onSaveSignature, onClose }) {
       ctx.rotate((angle * Math.PI) / 180);
 
       const fontObj = GOOGLE_SIGNATURE_FONTS.find(f => f.id === selectedFont) || GOOGLE_SIGNATURE_FONTS[0];
-      ctx.font = `italic ${fontSize * 1.3}px ${fontObj.family}`;
+      ctx.font = `italic ${fontSize * 1.5}px ${fontObj.family}`;
       ctx.fillStyle = color;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
@@ -190,38 +202,38 @@ export default function SignatureModal({ onSaveSignature, onClose }) {
       // Measure text for underline
       const textMetrics = ctx.measureText(typedName);
       const textW = textMetrics.width;
-      const baseY = fontSize * 0.45;
+      const baseY = fontSize * 0.55;
 
       ctx.strokeStyle = color;
-      ctx.lineWidth = Math.max(2, fontSize * 0.05);
+      ctx.lineWidth = Math.max(3, fontSize * 0.05);
 
       if (underlineStyle === 'solid') {
         ctx.beginPath();
-        ctx.moveTo(-textW / 2 - 10, baseY);
-        ctx.lineTo(textW / 2 + 10, baseY);
+        ctx.moveTo(-textW / 2 - 12, baseY);
+        ctx.lineTo(textW / 2 + 12, baseY);
         ctx.stroke();
       } else if (underlineStyle === 'double') {
         ctx.beginPath();
-        ctx.moveTo(-textW / 2 - 10, baseY - 3);
-        ctx.lineTo(textW / 2 + 10, baseY - 3);
-        ctx.moveTo(-textW / 2 - 10, baseY + 3);
-        ctx.lineTo(textW / 2 + 10, baseY + 3);
+        ctx.moveTo(-textW / 2 - 12, baseY - 4);
+        ctx.lineTo(textW / 2 + 12, baseY - 4);
+        ctx.moveTo(-textW / 2 - 12, baseY + 4);
+        ctx.lineTo(textW / 2 + 12, baseY + 4);
         ctx.stroke();
       } else if (underlineStyle === 'dashed') {
-        ctx.setLineDash([8, 6]);
+        ctx.setLineDash([10, 8]);
         ctx.beginPath();
-        ctx.moveTo(-textW / 2 - 10, baseY);
-        ctx.lineTo(textW / 2 + 10, baseY);
+        ctx.moveTo(-textW / 2 - 12, baseY);
+        ctx.lineTo(textW / 2 + 12, baseY);
         ctx.stroke();
         ctx.setLineDash([]);
       } else if (underlineStyle === 'swash') {
         // Artistic signature flourish curve
         ctx.beginPath();
-        ctx.moveTo(-textW / 2 - 15, baseY - 4);
+        ctx.moveTo(-textW / 2 - 20, baseY - 6);
         ctx.bezierCurveTo(
-          -textW * 0.1, baseY + 14,
-          textW * 0.4, baseY - 12,
-          textW / 2 + 25, baseY + 8
+          -textW * 0.1, baseY + 18,
+          textW * 0.4, baseY - 16,
+          textW / 2 + 30, baseY + 10
         );
         ctx.stroke();
       }
@@ -231,15 +243,42 @@ export default function SignatureModal({ onSaveSignature, onClose }) {
     } else if (activeTab === 'stamp') {
       if (!stampImage) return;
       const img = stampImage.img;
-      outCanvas.width = img.naturalWidth || 400;
-      outCanvas.height = img.naturalHeight || 400;
+      const naturalW = img.naturalWidth || 500;
+      const naturalH = img.naturalHeight || 500;
+
+      outCanvas.width = naturalW;
+      outCanvas.height = naturalH;
       const ctx = outCanvas.getContext('2d');
 
+      // If a transparent shape frame is selected, apply clipping mask
+      if (cropFrame !== 'none') {
+        const frameW = (naturalW * (cropScale / 100));
+        const frameH = (naturalH * (cropScale / 100));
+        const centerX = (naturalW / 2) + (cropOffsetX / 100) * naturalW * 0.3;
+        const centerY = (naturalH / 2) + (cropOffsetY / 100) * naturalH * 0.3;
+
+        ctx.save();
+        ctx.beginPath();
+        if (cropFrame === 'circle') {
+          const radius = Math.min(frameW, frameH) / 2;
+          ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+        } else if (cropFrame === 'oval') {
+          ctx.ellipse(centerX, centerY, frameW / 2, frameH / 2, 0, 0, Math.PI * 2);
+        } else if (cropFrame === 'rect') {
+          ctx.rect(centerX - frameW / 2, centerY - frameH / 2, frameW, frameH);
+        }
+        ctx.clip();
+      }
+
       ctx.globalAlpha = stampOpacity;
-      ctx.drawImage(img, 0, 0, outCanvas.width, outCanvas.height);
+      ctx.drawImage(img, 0, 0, naturalW, naturalH);
+
+      if (cropFrame !== 'none') {
+        ctx.restore();
+      }
 
       if (removeBg || stampColorMode === 'ink') {
-        const imgData = ctx.getImageData(0, 0, outCanvas.width, outCanvas.height);
+        const imgData = ctx.getImageData(0, 0, naturalW, naturalH);
         const data = imgData.data;
 
         // Parse tint color
@@ -256,9 +295,8 @@ export default function SignatureModal({ onSaveSignature, onClose }) {
 
           // Transparent white background removal
           if (removeBg && brightness > 220) {
-            data[i + 3] = 0; // Alpha to 0
+            data[i + 3] = 0;
           } else if (stampColorMode === 'ink' && data[i + 3] > 10) {
-            // Tint ink
             data[i] = tr;
             data[i + 1] = tg;
             data[i + 2] = tb;
@@ -285,7 +323,7 @@ export default function SignatureModal({ onSaveSignature, onClose }) {
         exit={{ opacity: 0, scale: 0.95 }}
         className="glass-panel"
         style={{
-          width: '100%', maxWidth: 640, maxHeight: '94vh',
+          width: '100%', maxWidth: 660, maxHeight: '94vh',
           display: 'flex', flexDirection: 'column',
           background: 'var(--bg-color)', borderRadius: 22,
           border: '1px solid var(--glass-border)', boxShadow: '0 24px 70px rgba(0,0,0,0.35)',
@@ -299,7 +337,7 @@ export default function SignatureModal({ onSaveSignature, onClose }) {
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{
-              width: 38, height: 38, borderRadius: 11,
+              width: 36, height: 36, borderRadius: 10,
               background: 'rgba(175, 82, 222, 0.15)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               color: '#af52de',
@@ -307,8 +345,8 @@ export default function SignatureModal({ onSaveSignature, onClose }) {
               <PenTool size={20} />
             </div>
             <div>
-              <h3 style={{ fontSize: 17, fontWeight: 600 }}>E-Sign & Digital Signature Studio</h3>
-              <p style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Draw, type with Google calligraphy fonts, or upload official stamps</p>
+              <h3 style={{ fontSize: 16, fontWeight: 600 }}>E-Signature Studio</h3>
+              <p style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Create legal signatures, custom calligraphy, or transparent stamp seals</p>
             </div>
           </div>
           <button className="btn" onClick={onClose} style={{ padding: 6 }}>
@@ -316,13 +354,13 @@ export default function SignatureModal({ onSaveSignature, onClose }) {
           </button>
         </div>
 
-        {/* Tab Selection */}
+        {/* Tab Navigation */}
         <div style={{
           display: 'flex', padding: '8px 22px 0', gap: 6,
           borderBottom: '1px solid var(--glass-border)', background: 'var(--glass-bg)',
         }}>
           {[
-            { id: 'draw', label: 'Draw Signature', icon: PenTool },
+            { id: 'draw', label: 'Draw Ink', icon: PenTool },
             { id: 'type', label: 'Type Calligraphy', icon: Type },
             { id: 'stamp', label: 'Stamp & Image Seal', icon: Stamp },
           ].map(t => {
@@ -348,23 +386,23 @@ export default function SignatureModal({ onSaveSignature, onClose }) {
           })}
         </div>
 
-        {/* Content Area */}
-        <div style={{ padding: 22, overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: 18 }}>
+        {/* Main Content Area */}
+        <div style={{ padding: 20, overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: 16 }}>
 
           {/* ── TAB 1: DRAW SIGNATURE ── */}
           {activeTab === 'draw' && (
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                <span style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 500 }}>
-                  Draw with smooth brush strokes:
+                <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
+                  Draw your natural signature
                 </span>
                 <div style={{ display: 'flex', gap: 6 }}>
                   <button
                     className="btn"
                     onClick={undoLastStroke}
                     disabled={strokes.length === 0}
-                    style={{ padding: '3px 8px', fontSize: 11, gap: 4, opacity: strokes.length === 0 ? 0.4 : 1 }}
-                    title="Undo last stroke"
+                    style={{ fontSize: 11, padding: '4px 8px', gap: 4 }}
+                    title="Undo stroke"
                   >
                     <Undo2 size={12} /> Undo
                   </button>
@@ -372,24 +410,25 @@ export default function SignatureModal({ onSaveSignature, onClose }) {
                     className="btn"
                     onClick={clearDraw}
                     disabled={strokes.length === 0}
-                    style={{ padding: '3px 8px', fontSize: 11, color: '#ff3b30', gap: 4, opacity: strokes.length === 0 ? 0.4 : 1 }}
-                    title="Clear signature pad"
+                    style={{ fontSize: 11, padding: '4px 8px', gap: 4, color: '#ff3b30' }}
+                    title="Clear pad"
                   >
                     <Trash2 size={12} /> Clear
                   </button>
                 </div>
               </div>
 
+              {/* Drawing Pad Canvas */}
               <div style={{
-                width: '100%', height: 200, borderRadius: 14,
+                width: '100%', height: 210, borderRadius: 14,
                 background: '#ffffff', border: '1px solid var(--glass-border)',
-                overflow: 'hidden', cursor: 'crosshair', position: 'relative',
-                boxShadow: 'inset 0 2px 6px rgba(0,0,0,0.06)',
+                position: 'relative', overflow: 'hidden', cursor: 'crosshair',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
               }}>
                 <canvas
                   ref={canvasRef}
-                  width={600}
-                  height={200}
+                  width={560}
+                  height={210}
                   onMouseDown={startDrawing}
                   onMouseMove={draw}
                   onMouseUp={stopDrawing}
@@ -418,7 +457,7 @@ export default function SignatureModal({ onSaveSignature, onClose }) {
                   <input
                     type="range"
                     min="1.5"
-                    max="6.0"
+                    max="6.5"
                     step="0.5"
                     value={strokeWidth}
                     onChange={e => setStrokeWidth(parseFloat(e.target.value))}
@@ -494,14 +533,14 @@ export default function SignatureModal({ onSaveSignature, onClose }) {
                 {/* Font Size */}
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--text-secondary)', marginBottom: 4 }}>
-                    <span>Font Size</span>
+                    <span>Font Size (Large)</span>
                     <span>{fontSize}px</span>
                   </div>
                   <input
                     type="range"
-                    min="28"
-                    max="72"
-                    step="2"
+                    min="32"
+                    max="120"
+                    step="4"
                     value={fontSize}
                     onChange={e => setFontSize(parseInt(e.target.value, 10))}
                     style={{ width: '100%' }}
@@ -566,7 +605,7 @@ export default function SignatureModal({ onSaveSignature, onClose }) {
                   Live Preview:
                 </span>
                 <div style={{
-                  width: '100%', height: 120, borderRadius: 14,
+                  width: '100%', height: 130, borderRadius: 14,
                   background: '#ffffff', border: '1px solid var(--glass-border)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
@@ -585,20 +624,20 @@ export default function SignatureModal({ onSaveSignature, onClose }) {
                       {typedName || 'Your Signature'}
                     </span>
                     {underlineStyle === 'solid' && (
-                      <div style={{ height: 2, background: color, marginTop: 4, width: '105%' }} />
+                      <div style={{ height: 2.5, background: color, marginTop: 4, width: '105%' }} />
                     )}
                     {underlineStyle === 'double' && (
                       <div style={{ marginTop: 4 }}>
-                        <div style={{ height: 1.5, background: color, width: '105%', marginBottom: 2 }} />
-                        <div style={{ height: 1.5, background: color, width: '105%' }} />
+                        <div style={{ height: 2, background: color, width: '105%', marginBottom: 2 }} />
+                        <div style={{ height: 2, background: color, width: '105%' }} />
                       </div>
                     )}
                     {underlineStyle === 'dashed' && (
-                      <div style={{ height: 2, borderBottom: `2px dashed ${color}`, marginTop: 4, width: '105%' }} />
+                      <div style={{ height: 2.5, borderBottom: `2.5px dashed ${color}`, marginTop: 4, width: '105%' }} />
                     )}
                     {underlineStyle === 'swash' && (
-                      <svg width="120%" height="16" viewBox="0 0 200 16" style={{ marginTop: -2, overflow: 'visible' }}>
-                        <path d="M0,4 Q80,18 140,2 Q170,-4 200,10" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" />
+                      <svg width="120%" height="18" viewBox="0 0 200 18" style={{ marginTop: -2, overflow: 'visible' }}>
+                        <path d="M0,4 Q80,20 140,2 Q170,-4 200,12" fill="none" stroke={color} strokeWidth="3" strokeLinecap="round" />
                       </svg>
                     )}
                   </div>
@@ -628,16 +667,16 @@ export default function SignatureModal({ onSaveSignature, onClose }) {
                     onChange={handleStampUpload}
                   />
                   <UploadCloud size={40} color="#af52de" />
-                  <span style={{ fontSize: 14, fontWeight: 500, marginTop: 10 }}>Upload Stamp or Signature Photo</span>
+                  <span style={{ fontSize: 14, fontWeight: 500, marginTop: 10 }}>Upload Stamp, Seal or Signature Photo</span>
                   <span style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>
                     Supports PNG, JPG, TIFF, WebP, SVG
                   </span>
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  {/* Stamp Preview Canvas */}
+                  {/* Stamp Preview Canvas with Shape Crop Overlay */}
                   <div style={{
-                    width: '100%', height: 160, borderRadius: 14,
+                    width: '100%', height: 180, borderRadius: 14,
                     background: '#ffffff', border: '1px solid var(--glass-border)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     position: 'relative', overflow: 'hidden', padding: 12,
@@ -652,6 +691,21 @@ export default function SignatureModal({ onSaveSignature, onClose }) {
                         filter: stampColorMode === 'ink' ? `drop-shadow(0 0 0 ${color})` : 'none',
                       }}
                     />
+
+                    {/* Draggable/Visual Frame Boundary Overlay */}
+                    {cropFrame !== 'none' && (
+                      <div style={{
+                        position: 'absolute',
+                        width: `${cropScale}%`,
+                        height: `${cropScale}%`,
+                        borderRadius: cropFrame === 'circle' ? '50%' : cropFrame === 'oval' ? '50%' : 10,
+                        border: '2px dashed #0071e3',
+                        boxShadow: '0 0 0 9999px rgba(0,0,0,0.3)',
+                        pointerEvents: 'none',
+                        transform: `translate(${cropOffsetX}px, ${cropOffsetY}px)`,
+                      }} />
+                    )}
+
                     <button
                       className="btn"
                       onClick={() => setStampImage(null)}
@@ -662,8 +716,87 @@ export default function SignatureModal({ onSaveSignature, onClose }) {
                     </button>
                   </div>
 
+                  {/* Stamp Shape Frames & Crop Controls */}
+                  <div style={{ background: 'var(--glass-bg)', padding: 12, borderRadius: 14, border: '1px solid var(--glass-border)', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    <div>
+                      <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>
+                        Crop Transparent Shape Frame (Extract only this boundary):
+                      </span>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        {CROP_FRAMES.map(f => {
+                          const Icon = f.icon;
+                          const isSel = cropFrame === f.id;
+                          return (
+                            <button
+                              key={f.id}
+                              className="btn"
+                              onClick={() => setCropFrame(f.id)}
+                              style={{
+                                flex: 1, padding: '6px 8px', fontSize: 11, gap: 5,
+                                background: isSel ? 'var(--accent)' : 'var(--bg-color)',
+                                color: isSel ? 'var(--bg-color)' : 'var(--text-primary)',
+                              }}
+                            >
+                              <Icon size={13} /> {f.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {cropFrame !== 'none' && (
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, paddingTop: 6, borderTop: '1px solid var(--glass-border)' }}>
+                        <div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-secondary)', marginBottom: 2 }}>
+                            <span>Frame Size</span>
+                            <span>{cropScale}%</span>
+                          </div>
+                          <input
+                            type="range"
+                            min="30"
+                            max="100"
+                            step="2"
+                            value={cropScale}
+                            onChange={e => setCropScale(parseInt(e.target.value, 10))}
+                            style={{ width: '100%' }}
+                          />
+                        </div>
+                        <div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-secondary)', marginBottom: 2 }}>
+                            <span>Move X</span>
+                            <span>{cropOffsetX}px</span>
+                          </div>
+                          <input
+                            type="range"
+                            min="-50"
+                            max="50"
+                            step="2"
+                            value={cropOffsetX}
+                            onChange={e => setCropOffsetX(parseInt(e.target.value, 10))}
+                            style={{ width: '100%' }}
+                          />
+                        </div>
+                        <div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-secondary)', marginBottom: 2 }}>
+                            <span>Move Y</span>
+                            <span>{cropOffsetY}px</span>
+                          </div>
+                          <input
+                            type="range"
+                            min="-50"
+                            max="50"
+                            step="2"
+                            value={cropOffsetY}
+                            onChange={e => setCropOffsetY(parseInt(e.target.value, 10))}
+                            style={{ width: '100%' }}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
                   {/* Stamp Controls */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10, background: 'var(--glass-bg)', padding: 14, borderRadius: 14, border: '1px solid var(--glass-border)' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10, background: 'var(--glass-bg)', padding: 12, borderRadius: 14, border: '1px solid var(--glass-border)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                       <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: 'pointer' }}>
                         <input
@@ -672,7 +805,7 @@ export default function SignatureModal({ onSaveSignature, onClose }) {
                           onChange={e => setRemoveBg(e.target.checked)}
                           style={{ width: 16, height: 16, accentColor: 'var(--accent)' }}
                         />
-                        <span>Auto-Remove White Paper Background</span>
+                        <span>Auto-Remove White Background</span>
                       </label>
                       <ShieldCheck size={16} color="#34c759" />
                     </div>
@@ -777,7 +910,7 @@ export default function SignatureModal({ onSaveSignature, onClose }) {
           borderTop: '1px solid var(--glass-border)', background: 'var(--glass-bg)',
         }}>
           <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
-            Transparent PNG ready for stamping
+            High-definition vector signature ready for stamping
           </span>
 
           <div style={{ display: 'flex', gap: 10 }}>
@@ -802,4 +935,3 @@ export default function SignatureModal({ onSaveSignature, onClose }) {
     </div>
   );
 }
-

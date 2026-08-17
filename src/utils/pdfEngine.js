@@ -29,9 +29,10 @@ export async function reorganizePDFPages(file, pageConfigs) {
 
   for (const config of pageConfigs) {
     const [copiedPage] = await outputPdf.copyPages(sourcePdf, [config.pageIndex]);
-    if (config.rotation) {
-      const currentRotation = copiedPage.getRotation().angle;
-      copiedPage.setRotation(degrees((currentRotation + config.rotation) % 360));
+    if (config.rotation !== undefined && config.rotation !== null) {
+      const currentRotation = copiedPage.getRotation().angle || 0;
+      const targetAngle = ((currentRotation + config.rotation) % 360 + 360) % 360;
+      copiedPage.setRotation(degrees(targetAngle));
     }
     outputPdf.addPage(copiedPage);
   }
@@ -64,6 +65,7 @@ export async function splitPDFDocument(file, selectedPageIndices) {
  *   rotation: number (-90 to +90)
  *   color: string (hex)
  *   layout: 'center' | 'diagonal' | 'tile'
+ *   gridSpacing: number (distance between tiles, e.g. 80 - 300)
  *   imageBuffer: ArrayBuffer | Uint8Array (for image mode)
  *   imageType: 'image/png' | 'image/jpeg'
  */
@@ -76,6 +78,7 @@ export async function addWatermarkToPDF(file, {
   rotation = -45,
   color = '#ff3b30',
   layout = 'diagonal',
+  gridSpacing = 140,
   imageBuffer = null,
   imageType = 'image/png',
 }) {
@@ -105,15 +108,15 @@ export async function addWatermarkToPDF(file, {
       const textHeight = font.heightAtSize(size);
 
       if (layout === 'tile') {
-        // Tiled repeating watermark grid
-        const stepX = Math.max(160, textWidth + 80);
-        const stepY = Math.max(120, textHeight + 80);
-        for (let x = 40; x < width; x += stepX) {
-          for (let y = 40; y < height; y += stepY) {
+        // Tiled repeating watermark grid with user-customizable distance
+        const stepX = Math.max(60, gridSpacing + textWidth * 0.4);
+        const stepY = Math.max(60, gridSpacing + textHeight * 0.4);
+        for (let x = 30; x < width + stepX; x += stepX) {
+          for (let y = 30; y < height + stepY; y += stepY) {
             page.drawText(text, {
               x,
               y,
-              size: Math.max(14, size * 0.55),
+              size: Math.max(12, size * 0.65),
               font,
               color: rgb(r, g, b),
               opacity: Math.max(0.04, Math.min(1, opacity * 0.7)),
@@ -136,10 +139,24 @@ export async function addWatermarkToPDF(file, {
     }
   } else if (mode === 'image' && imageBuffer) {
     let embeddedImg;
-    if (imageType === 'image/jpeg' || imageType === 'image/jpg') {
-      embeddedImg = await pdfDoc.embedJpg(imageBuffer);
-    } else {
-      embeddedImg = await pdfDoc.embedPng(imageBuffer);
+    const cleanBytes = imageBuffer instanceof Uint8Array ? imageBuffer : new Uint8Array(imageBuffer);
+
+    try {
+      if (imageType && (imageType.includes('jpeg') || imageType.includes('jpg'))) {
+        embeddedImg = await pdfDoc.embedJpg(cleanBytes);
+      } else {
+        embeddedImg = await pdfDoc.embedPng(cleanBytes);
+      }
+    } catch (err1) {
+      try {
+        embeddedImg = await pdfDoc.embedPng(cleanBytes);
+      } catch (err2) {
+        embeddedImg = await pdfDoc.embedJpg(cleanBytes);
+      }
+    }
+
+    if (!embeddedImg) {
+      throw new Error('Could not embed watermark image. Please ensure file is a valid PNG or JPEG image.');
     }
 
     const { width: naturalW, height: naturalH } = embeddedImg;
@@ -151,10 +168,10 @@ export async function addWatermarkToPDF(file, {
       const targetH = naturalH * scaleFactor;
 
       if (layout === 'tile') {
-        const stepX = Math.max(160, targetW * 1.5);
-        const stepY = Math.max(140, targetH * 1.5);
-        for (let x = 40; x < width; x += stepX) {
-          for (let y = 40; y < height; y += stepY) {
+        const stepX = Math.max(60, gridSpacing + targetW * 0.6);
+        const stepY = Math.max(60, gridSpacing + targetH * 0.6);
+        for (let x = 30; x < width + stepX; x += stepX) {
+          for (let y = 30; y < height + stepY; y += stepY) {
             page.drawImage(embeddedImg, {
               x,
               y,
@@ -501,6 +518,34 @@ export async function exportPDFToImagesZip(pdfDocument, { dpiScale = 2.0, format
     const ext = format === 'image/jpeg' ? 'jpg' : 'png';
     const padded = String(pageNum).padStart(String(numPages).length, '0');
     zip.file(`page_${padded}.${ext}`, blob);
+  }
+
+  return await zip.generateAsync({ type: 'blob' });
+}
+
+/**
+ * Render selected pages of a PDF to high-resolution PNGs and package into a ZIP archive.
+ */
+export async function exportSelectedPagesAsImagesZip(file, selectedIndices, { dpiScale = 2.0 } = {}) {
+  const fileBuffer = await file.arrayBuffer();
+  const pdfDoc = await pdfjs.getDocument({ data: fileBuffer }).promise;
+  const zip = new JSZip();
+
+  for (let idx = 0; idx < selectedIndices.length; idx++) {
+    const pageNum = selectedIndices[idx] + 1;
+    const page = await pdfDoc.getPage(pageNum);
+    const viewport = page.getViewport({ scale: dpiScale });
+
+    const canvas = document.createElement('canvas');
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    const ctx = canvas.getContext('2d');
+
+    await page.render({ canvasContext: ctx, viewport }).promise;
+
+    const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png', 0.95));
+    const padded = String(idx + 1).padStart(String(selectedIndices.length).length, '0');
+    zip.file(`extracted_page_${padded}_(p${pageNum}).png`, blob);
   }
 
   return await zip.generateAsync({ type: 'blob' });
