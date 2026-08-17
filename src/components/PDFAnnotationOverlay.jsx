@@ -25,6 +25,19 @@ export default function PDFAnnotationOverlay({
   // Filter annotations for this page
   const pageItems = annotations.filter(a => a.pageNumber === pageNumber);
 
+  // Sync canvas pixel size to CSS rendered size on every resize/zoom change
+  // This prevents pointer coordinate drift when the page is scaled
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const newW = pageWidth || 600;
+    const newH = pageHeight || 800;
+    if (canvas.width !== newW || canvas.height !== newH) {
+      canvas.width  = newW;
+      canvas.height = newH;
+    }
+  }, [pageWidth, pageHeight]);
+
   // Setup freehand canvas
   useEffect(() => {
     const canvas = canvasRef.current;

@@ -10,7 +10,7 @@ import {
   Printer, BookOpen, Copy, Check, Sparkles, Wand2, LayoutGrid,
   Scissors, Stamp, Hash, FileImage, ShieldAlert, PenTool, CheckCircle,
   Undo2, Redo2, Pencil, MessageSquare, Square, Circle, ArrowUpRight,
-  Highlighter, Share2, Minimize2, Palette, Trash2, Edit3, Sliders, Type, CheckSquare
+  Highlighter, Share2, Minimize2, Palette, Trash2, Edit3, Sliders, Type, CheckSquare, Eye
 } from 'lucide-react';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
@@ -44,11 +44,12 @@ const DEFAULT_AR      = 1.294; // A4 height/width fallback aspect ratio
 function highlightMatches(text, query, pageNumber, activeMatch) {
   if (!query || !query.trim()) return text;
   const escaped = query.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const regex = new RegExp(`(${escaped})`, 'gi');
-  const parts = text.split(regex);
+  const splitRegex = new RegExp(`(${escaped})`, 'gi');
+  const testRegex  = new RegExp(escaped, 'i'); // non-global: no lastIndex drift
+  const parts = text.split(splitRegex);
 
   return parts.map((part, index) => {
-    if (regex.test(part)) {
+    if (testRegex.test(part)) {
       const isActive = activeMatch && activeMatch.pageNumber === pageNumber;
       return (
         <mark
@@ -358,14 +359,16 @@ export default function PDFViewer({
   const [loadError,      setLoadError]     = useState(null);
   const [containerWidth, setContainerWidth] = useState(0);
 
-  const searchInputRef = useRef(null);
-  const currentRef     = useRef(1);
-  const numRef         = useRef(null);
-  const scaleRef       = useRef(1.0);
-  const mainRef        = useRef(null);
-  const sidebarRef     = useRef(null);
-  const heightCache    = useRef({});
-  const pageTextCache  = useRef(new Map());
+  const searchInputRef  = useRef(null);
+  const currentRef      = useRef(1);
+  const numRef          = useRef(null);
+  const scaleRef        = useRef(1.0);
+  const mainRef         = useRef(null);
+  const sidebarRef      = useRef(null);
+  const heightCache     = useRef({});
+  const pageTextCache   = useRef(new Map());
+  const toolsMenuRef    = useRef(null);  // for click-outside dismissal
+  const readingMenuRef  = useRef(null);  // for click-outside dismissal
 
   const [renderCenter, setRenderCenter] = useState(1);
 
@@ -484,6 +487,20 @@ export default function PDFViewer({
     });
     ro.observe(el);
     return () => ro.disconnect();
+  }, []);
+
+  // Click-outside: dismiss open dropdown menus (Tools & Reading Shader)
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (toolsMenuRef.current && !toolsMenuRef.current.contains(e.target)) {
+        setShowToolsMenu(false);
+      }
+      if (readingMenuRef.current && !readingMenuRef.current.contains(e.target)) {
+        setShowReadingMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   // Compute responsive page width based on zoom & two-page spread
@@ -780,8 +797,8 @@ export default function PDFViewer({
           const { width: pageW, height: pageH } = targetPage.getSize();
 
           const scaleRatio = pageW / (pageWidth || 600);
-          const sigW = 160 * scaleRatio;
-          const sigH = (160 * (embeddedSig.height / embeddedSig.width)) * scaleRatio;
+          const sigW = 140 * scaleRatio;
+          const sigH = (140 * (embeddedSig.height / embeddedSig.width)) * scaleRatio;
 
           const sigX = sig.x * scaleRatio;
           const sigY = pageH - (sig.y * scaleRatio) - sigH;
@@ -997,27 +1014,28 @@ export default function PDFViewer({
         )}
       </AnimatePresence>
 
-      {/* ── Signature Placement Banner ── */}
+      {/* ── Pending Signature Placement Mode Indicator ── */}
       <AnimatePresence>
         {pendingSignature && (
           <motion.div
-            initial={{ opacity: 0, y: -20 }}
+            initial={{ opacity: 0, y: -16 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
+            exit={{ opacity: 0, y: -16 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 30 }}
             style={{
-              position: 'fixed', top: 76, left: '50%', transform: 'translateX(-50%)',
-              zIndex: 150, background: '#af52de', color: '#ffffff',
-              padding: '8px 20px', borderRadius: 24, display: 'flex', alignItems: 'center', gap: 10,
-              fontSize: 13, fontWeight: 500, boxShadow: '0 8px 30px rgba(175, 82, 222, 0.4)',
+              position: 'fixed', top: 72, left: '50%', transform: 'translateX(-50%)',
+              zIndex: 150, background: 'var(--accent)', color: 'var(--bg-color)',
+              padding: '6px 16px', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 8,
+              fontSize: 12, fontWeight: 500, boxShadow: 'var(--shadow-lg)',
             }}
           >
-            <PenTool size={16} /> Click anywhere on any page to stamp your signature
+            <PenTool size={14} /> Click anywhere on the page to place signature
             <button
               className="btn"
               onClick={() => setPendingSignature(null)}
-              style={{ color: '#ffffff', padding: 2, marginLeft: 8 }}
+              style={{ color: 'var(--bg-color)', padding: 2, marginLeft: 6 }}
             >
-              <X size={14} />
+              <X size={13} />
             </button>
           </motion.div>
         )}
@@ -1027,15 +1045,16 @@ export default function PDFViewer({
       <AnimatePresence>
         {isAnnotateMode && (
           <motion.div
-            initial={{ opacity: 0, y: -15 }}
+            initial={{ opacity: 0, y: -12 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -15 }}
+            exit={{ opacity: 0, y: -12 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 28 }}
             className="glass-panel"
             style={{
-              position: 'fixed', top: 76, left: '50%', transform: 'translateX(-50%)',
-              zIndex: 140, background: 'var(--bg-color)', padding: '6px 14px',
-              borderRadius: 16, display: 'flex', alignItems: 'center', gap: 8,
-              boxShadow: '0 12px 36px rgba(0,0,0,0.25)', border: '1px solid var(--glass-border)',
+              position: 'fixed', top: 72, left: '50%', transform: 'translateX(-50%)',
+              zIndex: 140, background: 'var(--surface-card)', padding: '5px 10px',
+              borderRadius: 'var(--radius-lg)', display: 'flex', alignItems: 'center', gap: 4,
+              boxShadow: 'var(--shadow-lg)', border: '1px solid var(--glass-border)',
             }}
           >
             {[
@@ -1050,45 +1069,45 @@ export default function PDFViewer({
               const Icon = t.icon;
               const isSelected = activeAnnotateTool === t.id;
               return (
-                <button
+                <motion.button
                   key={t.id}
                   className="btn"
+                  whileTap={{ scale: 0.92 }}
                   onClick={() => setActiveAnnotateTool(isSelected ? null : t.id)}
                   style={{
-                    padding: '6px 10px', fontSize: 12, gap: 5, borderRadius: 8,
-                    background: isSelected ? 'var(--accent)' : 'var(--glass-bg)',
-                    color: isSelected ? 'var(--bg-color)' : 'var(--text-primary)',
+                    padding: '6px 8px', fontSize: 12, gap: 5, borderRadius: 'var(--radius-sm)',
+                    background: isSelected ? 'var(--accent)' : 'transparent',
+                    color: isSelected ? 'var(--bg-color)' : 'var(--text-secondary)',
                   }}
                   title={t.label}
                 >
                   <Icon size={14} />
-                  <span style={{ display: 'none' }}>{t.label}</span>
-                </button>
+                </motion.button>
               );
             })}
 
-            <div style={{ width: 1, height: 18, background: 'var(--glass-border)' }} />
+            <div style={{ width: 1, height: 16, background: 'var(--glass-border)', margin: '0 2px' }} />
 
             {/* Color Swatch / Native Color Picker */}
             <input
               type="color"
               value={annotateColor}
               onChange={e => setAnnotateColor(e.target.value)}
-              style={{ width: 26, height: 26, borderRadius: 6, border: 'none', cursor: 'pointer', background: 'transparent' }}
+              style={{ width: 22, height: 22, borderRadius: 5, border: 'none', cursor: 'pointer', background: 'transparent' }}
               title="Annotation Color"
             />
 
             {/* Stroke Width Selector */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
               {[2, 4, 8].map(w => (
                 <button
                   key={w}
                   className="btn"
                   onClick={() => setAnnotateStrokeWidth(w)}
                   style={{
-                    width: 24, height: 24, padding: 0, borderRadius: 6,
-                    background: annotateStrokeWidth === w ? 'var(--accent)' : 'transparent',
-                    color: annotateStrokeWidth === w ? 'var(--bg-color)' : 'var(--text-secondary)',
+                    width: 22, height: 22, padding: 0, borderRadius: 4,
+                    background: annotateStrokeWidth === w ? 'var(--accent-soft)' : 'transparent',
+                    color: annotateStrokeWidth === w ? 'var(--text-primary)' : 'var(--text-tertiary)',
                     fontSize: 11, fontWeight: 600,
                   }}
                 >
@@ -1099,14 +1118,14 @@ export default function PDFViewer({
 
             {/* Clear all annotations button */}
             {annotations.length > 0 && (
-              <button
+              <motion.button
                 className="btn"
+                whileTap={{ scale: 0.92 }}
                 onClick={() => { recordSnapshot(); setAnnotations([]); }}
-                style={{ padding: '4px 8px', color: '#ff3b30', fontSize: 11, gap: 4 }}
-                title="Clear all annotations"
+                style={{ padding: '4px 8px', fontSize: 11, color: '#ef4444', gap: 4 }}
               >
                 <Trash2 size={13} /> Clear
-              </button>
+              </motion.button>
             )}
 
             <button
@@ -1122,20 +1141,27 @@ export default function PDFViewer({
       </AnimatePresence>
 
       {/* ── Floating Text Selection Toolbar ── */}
-      {selectionBox && (
-        <div
-          className="selection-toolbar"
-          style={{ top: selectionBox.top, left: selectionBox.left }}
-        >
-          <button className="btn" onClick={handleCopySelection} title="Copy selected text" style={{ padding: '4px 8px', fontSize: 12, gap: 4 }}>
-            <Copy size={13} /> Copy
-          </button>
-          <div style={{ width: 1, height: 16, background: 'var(--glass-border)' }} />
-          <button className="btn" onClick={handleSearchSelection} title="Find this phrase in document" style={{ padding: '4px 8px', fontSize: 12, gap: 4 }}>
-            <Search size={13} /> Search
-          </button>
-        </div>
-      )}
+      <AnimatePresence>
+        {selectionBox && (
+          <motion.div
+            key="sel-toolbar"
+            initial={{ opacity: 0, y: 4, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 4, scale: 0.96 }}
+            transition={{ duration: 0.12 }}
+            className="selection-toolbar"
+            style={{ top: selectionBox.top, left: selectionBox.left }}
+          >
+            <button className="btn" onClick={handleCopySelection} title="Copy selected text" style={{ padding: '4px 8px', fontSize: 12, gap: 4 }}>
+              <Copy size={13} /> Copy
+            </button>
+            <div style={{ width: 1, height: 16, background: 'var(--glass-border)' }} />
+            <button className="btn" onClick={handleSearchSelection} title="Find this phrase in document" style={{ padding: '4px 8px', fontSize: 12, gap: 4 }}>
+              <Search size={13} /> Search
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ── Copied Feedback Toast ── */}
       <AnimatePresence>
@@ -1158,61 +1184,68 @@ export default function PDFViewer({
 
       {/* ── Floating Top Navbar ── */}
       <motion.nav
-        initial={{ y: -80, opacity: 0 }}
+        initial={{ y: -70, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        transition={{ type: 'spring', damping: 22, stiffness: 180 }}
+        transition={{ type: 'spring', damping: 26, stiffness: 220 }}
         className="glass-panel"
         style={{
           position: 'fixed', top: 12, left: 16, right: 16,
-          height: 56, display: 'flex', alignItems: 'center',
-          justifyContent: 'space-between', padding: '0 16px', zIndex: 100,
+          height: 52, display: 'flex', alignItems: 'center',
+          justifyContent: 'space-between', padding: '0 14px', zIndex: 100,
+          borderRadius: 'var(--radius-lg)',
         }}
       >
         {/* Left Controls */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <button className="btn" onClick={onClose} title="Close Document" style={{ padding: 6 }}>
-            <X size={18} color="var(--text-secondary)" />
-          </button>
-          <div style={{ width: 1, height: 20, background: 'var(--glass-border)' }} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <motion.button
+            className="btn"
+            onClick={onClose}
+            whileTap={{ scale: 0.94 }}
+            title="Close Document"
+            style={{ padding: 5, borderRadius: 'var(--radius-sm)' }}
+          >
+            <X size={16} color="var(--text-secondary)" />
+          </motion.button>
+          <div style={{ width: 1, height: 16, background: 'var(--glass-border)' }} />
 
           {/* Sidebar toggle */}
           <motion.button
             className="btn"
             onClick={() => setShowSidebar(v => !v)}
             title="Toggle Sidebar (S)"
-            whileTap={{ scale: 0.88 }}
-            whileHover={{ scale: 1.08 }}
+            whileTap={{ scale: 0.92 }}
             style={{
-              padding: 6,
-              background: showSidebar ? 'var(--accent)' : 'transparent',
-              borderRadius: 8,
-              transition: 'background 0.2s ease',
+              padding: 5,
+              background: showSidebar ? 'var(--accent-soft)' : 'transparent',
+              borderRadius: 'var(--radius-sm)',
             }}
           >
-            <LayoutList size={18} color={showSidebar ? 'var(--bg-color)' : 'var(--text-secondary)'} />
+            <LayoutList size={16} color="var(--text-primary)" />
           </motion.button>
 
           {/* Undo / Redo buttons */}
-          <button
+          <motion.button
             className="btn"
             disabled={history.length === 0}
             onClick={handleUndo}
+            whileTap={{ scale: 0.92 }}
             title="Undo last action (Ctrl+Z)"
-            style={{ padding: 5, opacity: history.length > 0 ? 1 : 0.35 }}
+            style={{ padding: 5, opacity: history.length > 0 ? 1 : 0.35, borderRadius: 'var(--radius-sm)' }}
           >
-            <Undo2 size={16} />
-          </button>
-          <button
+            <Undo2 size={15} />
+          </motion.button>
+          <motion.button
             className="btn"
             disabled={future.length === 0}
             onClick={handleRedo}
+            whileTap={{ scale: 0.92 }}
             title="Redo action (Ctrl+Y / Ctrl+Shift+Z)"
-            style={{ padding: 5, opacity: future.length > 0 ? 1 : 0.35 }}
+            style={{ padding: 5, opacity: future.length > 0 ? 1 : 0.35, borderRadius: 'var(--radius-sm)' }}
           >
-            <Redo2 size={16} />
-          </button>
+            <Redo2 size={15} />
+          </motion.button>
 
-          <div style={{ width: 1, height: 20, background: 'var(--glass-border)' }} />
+          <div style={{ width: 1, height: 16, background: 'var(--glass-border)' }} />
 
           {/* Document Title with Pencil Rename Support */}
           {isRenamingDoc ? (
@@ -1263,24 +1296,25 @@ export default function PDFViewer({
         </div>
 
         {/* Center / Navigation & Markup Controls */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           {numPages && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              <button className="btn" onClick={() => scrollToPage(currentPage - 1)} style={{ padding: 4 }} title="Previous Page (PgUp)">
-                <ChevronUp size={16} color="var(--text-secondary)" />
-              </button>
-              <span style={{ fontSize: 13, minWidth: 64, textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 2, background: 'var(--bg-subtle)', padding: '2px 6px', borderRadius: 'var(--radius-sm)' }}>
+              <motion.button whileTap={{ scale: 0.9 }} className="btn" onClick={() => scrollToPage(currentPage - 1)} style={{ padding: 3 }} title="Previous Page (PgUp)">
+                <ChevronUp size={14} color="var(--text-secondary)" />
+              </motion.button>
+              <span style={{ fontSize: 12, minWidth: 52, textAlign: 'center', fontVariantNumeric: 'tabular-nums', fontWeight: 500 }}>
                 {currentPage} / {numPages}
               </span>
-              <button className="btn" onClick={() => scrollToPage(currentPage + 1)} style={{ padding: 4 }} title="Next Page (PgDn)">
-                <ChevronDown size={16} color="var(--text-secondary)" />
-              </button>
+              <motion.button whileTap={{ scale: 0.9 }} className="btn" onClick={() => scrollToPage(currentPage + 1)} style={{ padding: 3 }} title="Next Page (PgDn)">
+                <ChevronDown size={14} color="var(--text-secondary)" />
+              </motion.button>
             </div>
           )}
 
           {/* Annotate & Markup Toggle */}
-          <button
+          <motion.button
             className="btn"
+            whileTap={{ scale: 0.95 }}
             onClick={() => {
               setIsAnnotateMode(v => !v);
               if (!isAnnotateMode) setActiveAnnotateTool('pen');
@@ -1288,32 +1322,34 @@ export default function PDFViewer({
             }}
             title="Edit & Annotate PDF (Draw, Text Blocks, Shapes, Comments)"
             style={{
-              padding: '5px 10px', borderRadius: 8, fontSize: 12, gap: 5,
-              background: isAnnotateMode ? 'var(--accent)' : 'var(--glass-bg)',
+              padding: '5px 10px', borderRadius: 'var(--radius-sm)', fontSize: 12, gap: 5,
+              background: isAnnotateMode ? 'var(--accent)' : 'transparent',
               color: isAnnotateMode ? 'var(--bg-color)' : 'var(--text-primary)',
-              border: '1px solid var(--glass-border)', fontWeight: 600,
+              border: isAnnotateMode ? '1px solid var(--accent)' : '1px solid var(--glass-border)',
+              fontWeight: 500,
             }}
           >
-            <Edit3 size={14} /> Annotate
-          </button>
+            <Edit3 size={13} /> Annotate
+          </motion.button>
         </div>
 
         {/* Right Tools */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
           
-          {/* ── Ultra Fast Search Bar with Auto-Focus & Neon Highlights ── */}
+          {/* ── Search Bar with Clean Champagne Highlight ── */}
           <div style={{
             position: 'relative', display: 'flex', alignItems: 'center',
-            background: 'var(--glass-bg)', border: '1px solid var(--glass-border)',
-            borderRadius: 10, padding: '2px 6px 2px 28px',
+            background: 'var(--surface-card)', border: '1px solid var(--glass-border)',
+            borderRadius: 'var(--radius-sm)', padding: '2px 6px 2px 26px',
+            boxShadow: 'var(--shadow-sm)',
           }}>
-            <Search size={14} color="var(--text-secondary)"
-              style={{ position: 'absolute', left: 9, pointerEvents: 'none' }} />
+            <Search size={13} color="var(--text-tertiary)"
+              style={{ position: 'absolute', left: 8, pointerEvents: 'none' }} />
             
             <input
               ref={searchInputRef}
               type="text"
-              placeholder="Search in doc…"
+              placeholder="Search doc…"
               value={searchQuery}
               onFocus={e => e.target.select()}
               onChange={e => setSearchQuery(e.target.value)}
@@ -1321,41 +1357,44 @@ export default function PDFViewer({
                 background: 'transparent',
                 border: 'none',
                 color: 'var(--text-primary)',
-                fontSize: 13, outline: 'none',
-                width: searchQuery ? 140 : 110,
+                fontSize: 12, outline: 'none',
+                width: searchQuery ? 120 : 96,
+                padding: '4px 0',
                 transition: 'width 0.2s ease',
               }}
             />
 
             {/* Match Counter & Next/Prev Controls */}
             {searchQuery && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 3, marginLeft: 4 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 2, marginLeft: 4 }}>
                 <span style={{
-                  fontSize: 11, color: searchResults.length > 0 ? 'var(--text-primary)' : '#ff3b30',
-                  fontWeight: 500, minWidth: 38, textAlign: 'center',
+                  fontSize: 11, color: searchResults.length > 0 ? 'var(--text-secondary)' : '#ef4444',
+                  fontWeight: 500, minWidth: 32, textAlign: 'center',
                 }}>
                   {isSearching ? '…' : searchResults.length > 0 ? `${activeMatchIndex + 1}/${searchResults.length}` : '0/0'}
                 </span>
 
-                <button
+                <motion.button
+                  whileTap={{ scale: 0.88 }}
                   className="btn"
                   onClick={handlePrevMatch}
                   title="Previous match (Shift+Enter)"
                   disabled={searchResults.length === 0}
                   style={{ padding: 2, opacity: searchResults.length > 0 ? 1 : 0.4 }}
                 >
-                  <ChevronUp size={14} color="var(--text-secondary)" />
-                </button>
+                  <ChevronUp size={13} color="var(--text-secondary)" />
+                </motion.button>
 
-                <button
+                <motion.button
+                  whileTap={{ scale: 0.88 }}
                   className="btn"
                   onClick={handleNextMatch}
                   title="Next match (Enter)"
                   disabled={searchResults.length === 0}
                   style={{ padding: 2, opacity: searchResults.length > 0 ? 1 : 0.4 }}
                 >
-                  <ChevronDown size={14} color="var(--text-secondary)" />
-                </button>
+                  <ChevronDown size={13} color="var(--text-secondary)" />
+                </motion.button>
 
                 <button
                   className="btn"
@@ -1363,209 +1402,183 @@ export default function PDFViewer({
                   title="Clear search"
                   style={{ padding: 2 }}
                 >
-                  <X size={13} color="var(--text-secondary)" />
+                  <X size={12} color="var(--text-secondary)" />
                 </button>
               </div>
             )}
           </div>
 
-          <div style={{ width: 1, height: 20, background: 'var(--glass-border)' }} />
+          <div style={{ width: 1, height: 16, background: 'var(--glass-border)' }} />
 
           {/* Share PDF Button */}
-          <button
+          <motion.button
+            whileTap={{ scale: 0.92 }}
             className="btn"
             onClick={() => setActiveViewerTool('share')}
             title="Share Document"
-            style={{ padding: 6 }}
+            style={{ padding: 5, borderRadius: 'var(--radius-sm)' }}
           >
-            <Share2 size={16} color="var(--text-secondary)" />
-          </button>
+            <Share2 size={15} color="var(--text-secondary)" />
+          </motion.button>
 
           {/* ── Power Tools Dropdown Trigger ── */}
-          <div style={{ position: 'relative' }}>
-            <button
-              className="btn"
+          <div ref={toolsMenuRef} style={{ position: 'relative' }}>
+            <motion.button
+              className="btn btn-soft"
+              whileTap={{ scale: 0.95 }}
               onClick={() => setShowToolsMenu(v => !v)}
               title="All PDF Power Tools"
               style={{
                 padding: '5px 10px',
-                borderRadius: 8,
-                background: showToolsMenu ? 'var(--accent)' : 'var(--glass-bg)',
-                color: showToolsMenu ? 'var(--bg-color)' : 'var(--text-primary)',
-                border: '1px solid var(--glass-border)',
+                borderRadius: 'var(--radius-sm)',
                 fontSize: 12,
-                fontWeight: 600,
+                fontWeight: 500,
                 gap: 5,
               }}
             >
-              <Wand2 size={14} /> Tools
-            </button>
+              <Wand2 size={13} /> Tools
+            </motion.button>
 
             {/* In-Viewer Tools Menu Flyout */}
             <AnimatePresence>
               {showToolsMenu && (
                 <motion.div
-                  initial={{ opacity: 0, scale: 0.95, y: 8 }}
+                  initial={{ opacity: 0, scale: 0.96, y: 6 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95, y: 8 }}
+                  exit={{ opacity: 0, scale: 0.96, y: 6 }}
+                  transition={{ type: 'spring', stiffness: 400, damping: 28 }}
                   className="glass-panel"
                   style={{
-                    position: 'absolute', right: 0, top: 40, width: 230,
-                    borderRadius: 14, padding: 6, zIndex: 200,
-                    background: 'var(--bg-color)', border: '1px solid var(--glass-border)',
-                    boxShadow: '0 12px 36px rgba(0,0,0,0.25)',
+                    position: 'absolute', right: 0, top: 38, width: 220,
+                    borderRadius: 'var(--radius-md)', padding: 5, zIndex: 200,
+                    background: 'var(--surface-card)', border: '1px solid var(--glass-border)',
+                    boxShadow: 'var(--shadow-lg)',
                     display: 'flex', flexDirection: 'column', gap: 2,
                   }}
                 >
-                  <button
-                    className="btn"
-                    onClick={() => { setActiveViewerTool('compress'); setShowToolsMenu(false); }}
-                    style={{ justifyContent: 'flex-start', padding: '8px 10px', fontSize: 13, gap: 8, borderRadius: 8 }}
-                  >
-                    <Minimize2 size={15} color="#34c759" /> Compress PDF
-                  </button>
-                  <button
-                    className="btn"
-                    onClick={() => { setActiveViewerTool('organize'); setShowToolsMenu(false); }}
-                    style={{ justifyContent: 'flex-start', padding: '8px 10px', fontSize: 13, gap: 8, borderRadius: 8 }}
-                  >
-                    <LayoutGrid size={15} color="#34c759" /> Organize Pages
-                  </button>
-                  <button
-                    className="btn"
-                    onClick={() => { setActiveViewerTool('split'); setShowToolsMenu(false); }}
-                    style={{ justifyContent: 'flex-start', padding: '8px 10px', fontSize: 13, gap: 8, borderRadius: 8 }}
-                  >
-                    <Scissors size={15} color="#ff3b30" /> Split / Extract
-                  </button>
-                  <button
-                    className="btn"
-                    onClick={() => { setActiveViewerTool('signature'); setShowToolsMenu(false); }}
-                    style={{ justifyContent: 'flex-start', padding: '8px 10px', fontSize: 13, gap: 8, borderRadius: 8 }}
-                  >
-                    <PenTool size={15} color="#af52de" /> E-Sign Signature
-                  </button>
-                  <button
-                    className="btn"
-                    onClick={() => { setActiveViewerTool('watermark'); setShowToolsMenu(false); }}
-                    style={{ justifyContent: 'flex-start', padding: '8px 10px', fontSize: 13, gap: 8, borderRadius: 8 }}
-                  >
-                    <Stamp size={15} color="#ff9500" /> Watermark & Tint
-                  </button>
-                  <button
-                    className="btn"
-                    onClick={() => { setActiveViewerTool('numbering'); setShowToolsMenu(false); }}
-                    style={{ justifyContent: 'flex-start', padding: '8px 10px', fontSize: 13, gap: 8, borderRadius: 8 }}
-                  >
-                    <Hash size={15} color="#5856d6" /> Page Numbers
-                  </button>
-                  <button
-                    className="btn"
-                    onClick={() => { setActiveViewerTool('share'); setShowToolsMenu(false); }}
-                    style={{ justifyContent: 'flex-start', padding: '8px 10px', fontSize: 13, gap: 8, borderRadius: 8 }}
-                  >
-                    <Share2 size={15} color="#0071e3" /> Share PDF
-                  </button>
-                  <button
-                    className="btn"
-                    onClick={() => { setActiveViewerTool('pdf-to-img'); setShowToolsMenu(false); }}
-                    style={{ justifyContent: 'flex-start', padding: '8px 10px', fontSize: 13, gap: 8, borderRadius: 8 }}
-                  >
-                    <FileImage size={15} color="#30b0c7" /> Export Images ZIP
-                  </button>
-                  <button
-                    className="btn"
-                    onClick={() => { setActiveViewerTool('sanitize'); setShowToolsMenu(false); }}
-                    style={{ justifyContent: 'flex-start', padding: '8px 10px', fontSize: 13, gap: 8, borderRadius: 8 }}
-                  >
-                    <ShieldAlert size={15} color="#ff9500" /> Sanitize Metadata
-                  </button>
+                  {[
+                    { id: 'compress', label: 'Compress PDF', icon: Minimize2, color: '#0d9488' },
+                    { id: 'organize', label: 'Organize Pages', icon: LayoutGrid, color: '#059669' },
+                    { id: 'split', label: 'Split / Extract', icon: Scissors, color: '#dc2626' },
+                    { id: 'signature', label: 'E-Sign Signature', icon: PenTool, color: '#7c3aed' },
+                    { id: 'watermark', label: 'Watermark & Tint', icon: Stamp, color: '#d97706' },
+                    { id: 'numbering', label: 'Page Numbers', icon: Hash, color: '#4f46e5' },
+                    { id: 'share', label: 'Share PDF', icon: Share2, color: '#2563eb' },
+                    { id: 'pdf-to-img', label: 'Export Images ZIP', icon: FileImage, color: '#0891b2' },
+                    { id: 'sanitize', label: 'Sanitize Metadata', icon: ShieldAlert, color: '#d97706' },
+                  ].map(item => {
+                    const Icon = item.icon;
+                    return (
+                      <motion.button
+                        key={item.id}
+                        whileHover={{ x: 2 }}
+                        className="btn"
+                        onClick={() => { setActiveViewerTool(item.id); setShowToolsMenu(false); }}
+                        style={{
+                          justifyContent: 'flex-start', padding: '7px 10px', fontSize: 12, gap: 8,
+                          borderRadius: 'var(--radius-sm)',
+                        }}
+                      >
+                        <div style={{
+                          width: 24, height: 24, borderRadius: 6,
+                          background: 'var(--accent-soft)',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          color: 'var(--text-primary)',
+                        }}>
+                          <Icon size={13} />
+                        </div>
+                        {item.label}
+                      </motion.button>
+                    );
+                  })}
                 </motion.div>
               )}
             </AnimatePresence>
           </div>
 
-          <div style={{ width: 1, height: 20, background: 'var(--glass-border)' }} />
+          <div style={{ width: 1, height: 16, background: 'var(--glass-border)' }} />
 
           {/* Zoom Controls */}
-          <button className="btn" onClick={zoomOut} title="Zoom out (-)" style={{ padding: 5 }}>
-            <ZoomOut size={15} color="var(--text-secondary)" />
-          </button>
-          <span style={{ fontSize: 11, minWidth: 36, textAlign: 'center', color: 'var(--text-secondary)' }}>
+          <motion.button whileTap={{ scale: 0.9 }} className="btn" onClick={zoomOut} title="Zoom out (-)" style={{ padding: 4 }}>
+            <ZoomOut size={14} color="var(--text-secondary)" />
+          </motion.button>
+          <span style={{ fontSize: 11, minWidth: 32, textAlign: 'center', color: 'var(--text-secondary)', fontVariantNumeric: 'tabular-nums' }}>
             {Math.round(scale * 100)}%
           </span>
-          <button className="btn" onClick={zoomIn} title="Zoom in (+)" style={{ padding: 5 }}>
-            <ZoomIn size={15} color="var(--text-secondary)" />
-          </button>
+          <motion.button whileTap={{ scale: 0.9 }} className="btn" onClick={zoomIn} title="Zoom in (+)" style={{ padding: 4 }}>
+            <ZoomIn size={14} color="var(--text-secondary)" />
+          </motion.button>
 
           {/* Two-page Spread Switcher */}
-          <button
+          <motion.button
+            whileTap={{ scale: 0.9 }}
             className="btn"
             onClick={() => setViewMode(v => v === 'single' ? 'two-page' : 'single')}
             title={viewMode === 'two-page' ? 'Single page view' : 'Two-page spread view'}
             style={{
               padding: 5,
-              background: viewMode === 'two-page' ? 'var(--accent)' : 'transparent',
-              color: viewMode === 'two-page' ? 'var(--bg-color)' : 'var(--text-secondary)',
-              borderRadius: 6,
+              background: viewMode === 'two-page' ? 'var(--accent-soft)' : 'transparent',
+              color: 'var(--text-primary)',
+              borderRadius: 'var(--radius-sm)',
             }}
           >
-            <BookOpen size={16} />
-          </button>
+            <BookOpen size={14} />
+          </motion.button>
 
           {/* Rotate Clockwise */}
-          <button className="btn" onClick={rotate} title="Rotate 90° (R)" style={{ padding: 5 }}>
-            <RotateCw size={15} color="var(--text-secondary)" />
-          </button>
+          <motion.button whileTap={{ scale: 0.9 }} className="btn" onClick={rotate} title="Rotate 90° (R)" style={{ padding: 4 }}>
+            <RotateCw size={14} color="var(--text-secondary)" />
+          </motion.button>
 
           {/* Reading Paper Shader Switcher */}
           <div style={{ position: 'relative' }}>
-            <button
+            <motion.button
+              whileTap={{ scale: 0.92 }}
               className="btn"
               onClick={() => setShowReadingMenu(v => !v)}
-              title="Page Reading Tone & Shaders (Eye-Care Sepia, Mint, Night)"
+              title="Page Reading Tone (Eye-Care Sepia, Mint, Night)"
               style={{
                 padding: 5,
-                background: readingShader !== 'paper' ? 'var(--accent)' : 'transparent',
-                color: readingShader !== 'paper' ? 'var(--bg-color)' : 'var(--text-secondary)',
-                borderRadius: 6,
+                background: readingShader !== 'paper' ? 'var(--accent-soft)' : 'transparent',
+                borderRadius: 'var(--radius-sm)',
               }}
             >
-              <Eye size={15} />
-            </button>
+              <Eye size={14} color="var(--text-secondary)" />
+            </motion.button>
 
             <AnimatePresence>
               {showReadingMenu && (
                 <motion.div
-                  initial={{ opacity: 0, scale: 0.95, y: 8 }}
+                  initial={{ opacity: 0, scale: 0.96, y: 6 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95, y: 8 }}
+                  exit={{ opacity: 0, scale: 0.96, y: 6 }}
+                  transition={{ type: 'spring', stiffness: 400, damping: 28 }}
                   className="glass-panel"
                   style={{
-                    position: 'absolute', right: -20, top: 38, width: 210,
-                    borderRadius: 12, padding: 6, zIndex: 200,
-                    background: 'var(--bg-color)', border: '1px solid var(--glass-border)',
-                    boxShadow: '0 12px 36px rgba(0,0,0,0.25)',
+                    position: 'absolute', right: -10, top: 36, width: 190,
+                    borderRadius: 'var(--radius-md)', padding: 5, zIndex: 200,
+                    background: 'var(--surface-card)', border: '1px solid var(--glass-border)',
+                    boxShadow: 'var(--shadow-lg)',
                     display: 'flex', flexDirection: 'column', gap: 2,
                   }}
                 >
-                  <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', padding: '4px 8px' }}>
-                    Document Paper Shader:
+                  <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-tertiary)', padding: '4px 8px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    Paper Shader:
                   </span>
                   {[
-                    { id: 'paper', label: '☀️ Natural Crisp Paper', desc: 'Standard original colors' },
-                    { id: 'sepia', label: '📖 Warm Sepia', desc: 'Relaxing book page' },
-                    { id: 'mint', label: '🌿 Soft Mint Tone', desc: 'Reduces visual fatigue' },
-                    { id: 'slate', label: '🌫️ Cool Slate', desc: 'Soft grayscale tone' },
-                    { id: 'inverted', label: '🌙 Midnight Inverted', desc: 'OLED dark night reading' },
+                    { id: 'paper', label: '☀️ Natural Paper' },
+                    { id: 'sepia', label: '📖 Warm Sepia' },
+                    { id: 'mint', label: '🌿 Soft Mint Tone' },
+                    { id: 'slate', label: '🌫️ Cool Slate' },
+                    { id: 'inverted', label: '🌙 Night Inverted' },
                   ].map(s => (
                     <button
                       key={s.id}
                       className="btn"
                       onClick={() => { setReadingShader(s.id); setShowReadingMenu(false); }}
                       style={{
-                        justifyContent: 'flex-start', padding: '6px 8px', fontSize: 12, borderRadius: 6,
-                        background: readingShader === s.id ? 'var(--glass-border)' : 'transparent',
+                        justifyContent: 'flex-start', padding: '5px 8px', fontSize: 12, borderRadius: 'var(--radius-xs)',
+                        background: readingShader === s.id ? 'var(--accent-soft)' : 'transparent',
                         fontWeight: readingShader === s.id ? 600 : 400,
                       }}
                     >
@@ -1578,24 +1591,26 @@ export default function PDFViewer({
           </div>
 
           {/* App Dark / Light Mode Toggle */}
-          <button className="btn" onClick={handleToggleDarkMode} title="Toggle App Theme (Dark/Light)" style={{ padding: 5 }}>
-            {isDarkMode ? <Sun size={15} color="var(--text-secondary)" /> : <Moon size={15} color="var(--text-secondary)" />}
-          </button>
+          <motion.button whileTap={{ scale: 0.9 }} className="btn" onClick={handleToggleDarkMode} title="Toggle App Theme" style={{ padding: 4 }}>
+            {isDarkMode ? <Sun size={14} color="var(--text-secondary)" /> : <Moon size={14} color="var(--text-secondary)" />}
+          </motion.button>
 
           {/* Fullscreen */}
-          <button className="btn" onClick={toggleFullscreen} title="Fullscreen (F11)" style={{ padding: 5 }}>
-            {isFullscreen ? <Minimize size={15} color="var(--text-secondary)" /> : <Maximize size={15} color="var(--text-secondary)" />}
-          </button>
+          <motion.button whileTap={{ scale: 0.9 }} className="btn" onClick={toggleFullscreen} title="Fullscreen (F11)" style={{ padding: 4 }}>
+            {isFullscreen ? <Minimize size={14} color="var(--text-secondary)" /> : <Maximize size={14} color="var(--text-secondary)" />}
+          </motion.button>
 
           {/* Download */}
-          <button
+          <motion.button
             className="btn btn-primary"
+            whileHover={{ y: -1 }}
+            whileTap={{ scale: 0.95 }}
             onClick={handleDownload}
             title="Download PDF"
-            style={{ padding: '5px 10px', fontSize: 12, gap: 5 }}
+            style={{ padding: '5px 11px', fontSize: 12, gap: 5, borderRadius: 'var(--radius-sm)' }}
           >
-            <Download size={14} /> Download
-          </button>
+            <Download size={13} /> Download
+          </motion.button>
         </div>
       </motion.nav>
 
@@ -1774,7 +1789,6 @@ export default function PDFViewer({
             flexDirection: 'column',
             alignItems: 'center',
             background: 'var(--bg-color)',
-            scrollBehavior: 'smooth',
             scrollbarWidth: 'thin',
             willChange: 'scroll-position',
             outline: 'none',

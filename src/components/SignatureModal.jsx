@@ -114,13 +114,21 @@ export default function SignatureModal({ onSaveSignature, onClose }) {
     }
   }, [activeTab, redrawCanvas]);
 
+  const currentStrokeRef = useRef([]); // accumulate live stroke points imperatively
+
   const startDrawing = (e) => {
     isDrawingRef.current = true;
     const canvas = canvasRef.current;
     const rect = canvas.getBoundingClientRect();
     const x = ((e.clientX || e.touches?.[0]?.clientX) - rect.left) * (canvas.width / rect.width);
     const y = ((e.clientY || e.touches?.[0]?.clientY) - rect.top) * (canvas.height / rect.height);
-    setStrokes(prev => [...prev, [{ x, y }]]);
+    currentStrokeRef.current = [{ x, y }];
+    // draw starting dot
+    const ctx = canvas.getContext('2d');
+    ctx.beginPath();
+    ctx.arc(x, y, strokeWidth / 2, 0, Math.PI * 2);
+    ctx.fillStyle = color;
+    ctx.fill();
   };
 
   const draw = (e) => {
@@ -130,18 +138,29 @@ export default function SignatureModal({ onSaveSignature, onClose }) {
     const x = ((e.clientX || e.touches?.[0]?.clientX) - rect.left) * (canvas.width / rect.width);
     const y = ((e.clientY || e.touches?.[0]?.clientY) - rect.top) * (canvas.height / rect.height);
 
-    setStrokes(prev => {
-      const copy = [...prev];
-      const last = copy[copy.length - 1];
-      if (last) {
-        copy[copy.length - 1] = [...last, { x, y }];
-      }
-      return copy;
-    });
+    const pts = currentStrokeRef.current;
+    if (pts.length > 0) {
+      const ctx = canvas.getContext('2d');
+      ctx.strokeStyle = color;
+      ctx.lineWidth = strokeWidth;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.beginPath();
+      ctx.moveTo(pts[pts.length - 1].x, pts[pts.length - 1].y);
+      ctx.lineTo(x, y);
+      ctx.stroke();
+    }
+    currentStrokeRef.current = [...pts, { x, y }];
   };
 
   const stopDrawing = () => {
+    if (!isDrawingRef.current) return;
     isDrawingRef.current = false;
+    // commit completed stroke to state (triggers redrawCanvas on next render)
+    if (currentStrokeRef.current.length > 1) {
+      setStrokes(prev => [...prev, currentStrokeRef.current]);
+    }
+    currentStrokeRef.current = [];
   };
 
   const undoLastStroke = () => {

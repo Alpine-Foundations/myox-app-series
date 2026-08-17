@@ -18,15 +18,15 @@ export const TOOLS_CATEGORIES = [
         badge: 'Popular',
         desc: 'Combine multiple PDF documents into one unified file with custom ordering.',
         icon: Files,
-        color: '#0071e3',
+        color: '#2563eb',
       },
       {
         id: 'split',
         name: 'Split & Extract',
         badge: 'Free',
-        desc: 'Extract specific pages, page ranges, or split into individual documents.',
+        desc: 'Extract specific pages, page ranges, or export pages as PNG archives.',
         icon: Scissors,
-        color: '#ff3b30',
+        color: '#dc2626',
       },
       {
         id: 'organize',
@@ -34,7 +34,7 @@ export const TOOLS_CATEGORIES = [
         badge: 'Power Tool',
         desc: 'Drag & drop light-table to reorder, rotate, duplicate, or delete pages.',
         icon: LayoutGrid,
-        color: '#34c759',
+        color: '#059669',
       },
       {
         id: 'compress',
@@ -42,15 +42,15 @@ export const TOOLS_CATEGORIES = [
         badge: 'Optimized',
         desc: 'Reduce file size up to 90% in browser memory with zero quality compromise.',
         icon: Cpu,
-        color: '#34c759',
+        color: '#0d9488',
       },
       {
         id: 'gdrive',
-        name: 'Import from Google Drive',
+        name: 'Google Drive Importer',
         badge: 'Cloud Sync',
-        desc: 'Directly import and edit PDFs from Google Drive or web URLs without manual downloads.',
+        desc: 'Directly import and edit PDFs from Google Drive sharing links or web URLs.',
         icon: Sparkles,
-        color: '#4285f4',
+        color: '#4f46e5',
       },
     ],
   },
@@ -65,7 +65,7 @@ export const TOOLS_CATEGORIES = [
         badge: 'No Limits',
         desc: 'Draw, type Google calligraphy, or upload stamp seals directly onto your pages.',
         icon: PenTool,
-        color: '#af52de',
+        color: '#7c3aed',
       },
       {
         id: 'watermark',
@@ -73,7 +73,7 @@ export const TOOLS_CATEGORIES = [
         badge: 'Custom',
         desc: 'Add custom confidential stamps, logos, or eye-comfort reading background tints.',
         icon: Stamp,
-        color: '#ff9500',
+        color: '#d97706',
       },
       {
         id: 'numbering',
@@ -81,7 +81,7 @@ export const TOOLS_CATEGORIES = [
         badge: 'Smart Badges',
         desc: 'Insert book-style capsule pills, corner ribbon tabs, or Roman numerals.',
         icon: Hash,
-        color: '#5856d6',
+        color: '#4f46e5',
       },
       {
         id: 'annotate',
@@ -89,7 +89,7 @@ export const TOOLS_CATEGORIES = [
         badge: 'Interactive',
         desc: 'Add custom text blocks, sticky note comments, and geometric shapes.',
         icon: Type,
-        color: '#0071e3',
+        color: '#2563eb',
       },
     ],
   },
@@ -104,7 +104,7 @@ export const TOOLS_CATEGORIES = [
         badge: 'ZIP Export',
         desc: 'Convert PDF pages into high-definition PNG or JPEG image archives.',
         icon: FileImage,
-        color: '#30b0c7',
+        color: '#0891b2',
       },
       {
         id: 'img-to-pdf',
@@ -112,7 +112,7 @@ export const TOOLS_CATEGORIES = [
         badge: 'Multi-image',
         desc: 'Turn photos, scans, and images into a clean standardized PDF document.',
         icon: Image,
-        color: '#34c759',
+        color: '#059669',
       },
       {
         id: 'extract-text',
@@ -120,7 +120,7 @@ export const TOOLS_CATEGORIES = [
         badge: 'Instant',
         desc: 'Extract all textual content into clean Markdown or plain text files.',
         icon: Type,
-        color: '#8e8e93',
+        color: '#52525b',
       },
     ],
   },
@@ -135,7 +135,7 @@ export const TOOLS_CATEGORIES = [
         badge: 'Secure Link',
         desc: 'Send documents via AirDrop, Email, WhatsApp, or instant private workspace links.',
         icon: Shield,
-        color: '#0071e3',
+        color: '#2563eb',
       },
       {
         id: 'sanitize',
@@ -143,7 +143,7 @@ export const TOOLS_CATEGORIES = [
         badge: 'Privacy',
         desc: 'Strip author info, revision history, and hidden EXIF metadata before sharing.',
         icon: ShieldAlert,
-        color: '#ff9500',
+        color: '#d97706',
       },
     ],
   },
@@ -165,101 +165,109 @@ export default function ToolsHub({ onSelectTool }) {
     return { ...category, tools: matchingTools };
   }).filter(Boolean);
 
+  const categoryPills = [
+    { id: 'all', label: 'All Tools' },
+    ...TOOLS_CATEGORIES.map(c => ({ id: c.id, label: c.title.split(' ')[0] + ' Tools' })),
+  ];
+
   return (
-    <div style={{ width: '100%', maxWidth: 1080, margin: '0 auto', padding: '16px 20px 60px' }}>
+    <div style={{ width: '100%', maxWidth: 1040, margin: '0 auto', padding: '12px 0 60px' }}>
       
       {/* ── Banner Header ── */}
-      <div style={{ textAlign: 'center', marginBottom: 32 }}>
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 14px', borderRadius: 20, background: 'var(--glass-bg)', border: '1px solid var(--glass-border)', fontSize: 12, fontWeight: 600, color: 'var(--accent)', marginBottom: 12 }}
-        >
-          <Cpu size={14} /> 100% Free Client-Side PDF Powerhouse • Zero Cloud Uploads
-        </motion.div>
-        
-        <h2 style={{ fontSize: 32, fontWeight: 700, letterSpacing: '-0.03em', color: 'var(--text-primary)' }}>
-          All PDF Tools. Zero Paywalls.
+      <div style={{ textAlign: 'center', marginBottom: 28 }}>
+        <h2 style={{ fontSize: 28, fontWeight: 700, letterSpacing: '-0.03em', color: 'var(--text-primary)' }}>
+          All Free PDF Tools
         </h2>
-        <p style={{ fontSize: 14, color: 'var(--text-secondary)', marginTop: 8, maxWidth: 540, margin: '8px auto 0' }}>
-          Everything paid PDF software charges you for—available for free, running privately right inside your browser memory.
+        <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 6, maxWidth: 480, margin: '6px auto 0', lineHeight: 1.5 }}>
+          GPU-accelerated tools running 100% in your browser with complete privacy.
         </p>
 
         {/* ── Search Bar & Filter Tabs ── */}
-        <div style={{ marginTop: 24, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
-          <div style={{ position: 'relative', width: '100%', maxWidth: 440 }}>
-            <Search size={16} color="var(--text-secondary)" style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)' }} />
+        <div style={{ marginTop: 20, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
+          <div style={{ position: 'relative', width: '100%', maxWidth: 400 }}>
+            <Search size={15} color="var(--text-tertiary)" style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)' }} />
             <input
               type="text"
-              placeholder="Search all PDF tools (Merge, Split, E-Sign, Images)..."
+              placeholder="Search tools (Merge, Split, E-Sign, Images)…"
               value={search}
               onChange={e => setSearch(e.target.value)}
               style={{
                 width: '100%',
-                padding: '10px 14px 10px 40px',
-                borderRadius: 14,
-                background: 'var(--glass-bg)',
+                padding: '9px 14px 9px 38px',
+                borderRadius: 'var(--radius-md)',
+                background: 'var(--surface-card)',
                 border: '1px solid var(--glass-border)',
                 color: 'var(--text-primary)',
-                fontSize: 14,
+                fontSize: 13,
                 outline: 'none',
-                boxShadow: 'var(--glass-shadow)',
+                boxShadow: 'var(--shadow-sm)',
               }}
             />
             {search && (
               <button
                 className="btn"
                 onClick={() => setSearch('')}
-                style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', padding: 4 }}
+                style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', padding: 3 }}
               >
-                <X size={14} color="var(--text-secondary)" />
+                <X size={13} color="var(--text-secondary)" />
               </button>
             )}
           </div>
 
-          {/* Category Tabs */}
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, justifyContent: 'center' }}>
-            <button
-              className="btn"
-              onClick={() => setActiveCategory('all')}
-              style={{
-                padding: '6px 14px',
-                fontSize: 12,
-                borderRadius: 20,
-                background: activeCategory === 'all' ? 'var(--accent)' : 'var(--glass-bg)',
-                color: activeCategory === 'all' ? 'var(--bg-color)' : 'var(--text-primary)',
-                border: '1px solid var(--glass-border)',
-              }}
-            >
-              All Tools
-            </button>
-            {TOOLS_CATEGORIES.map(cat => (
-              <button
-                key={cat.id}
-                className="btn"
-                onClick={() => setActiveCategory(cat.id)}
-                style={{
-                  padding: '6px 14px',
-                  fontSize: 12,
-                  borderRadius: 20,
-                  background: activeCategory === cat.id ? 'var(--accent)' : 'var(--glass-bg)',
-                  color: activeCategory === cat.id ? 'var(--bg-color)' : 'var(--text-primary)',
-                  border: '1px solid var(--glass-border)',
-                }}
-              >
-                {cat.title}
-              </button>
-            ))}
+          {/* Category Tabs with Gliding Indicator */}
+          <div style={{
+            display: 'flex', flexWrap: 'wrap', gap: 4, justifyContent: 'center',
+            background: 'var(--bg-subtle)', padding: 3, borderRadius: 'var(--radius-md)',
+          }}>
+            {categoryPills.map(cat => {
+              const isSelected = activeCategory === cat.id;
+              return (
+                <motion.button
+                  key={cat.id}
+                  onClick={() => setActiveCategory(cat.id)}
+                  whileTap={{ scale: 0.97 }}
+                  style={{
+                    position: 'relative',
+                    padding: '5px 12px',
+                    fontSize: 12,
+                    fontWeight: isSelected ? 600 : 500,
+                    color: isSelected ? 'var(--text-primary)' : 'var(--text-secondary)',
+                    borderRadius: 'var(--radius-sm)',
+                    border: 'none',
+                    background: 'transparent',
+                    cursor: 'pointer',
+                    zIndex: 2,
+                    transition: 'color 0.15s ease',
+                  }}
+                >
+                  {isSelected && (
+                    <motion.div
+                      layoutId="active-hub-pill"
+                      transition={{ type: 'spring', stiffness: 420, damping: 32 }}
+                      style={{
+                        position: 'absolute',
+                        inset: 0,
+                        background: 'var(--surface-card)',
+                        borderRadius: 'var(--radius-sm)',
+                        boxShadow: 'var(--shadow-sm)',
+                        zIndex: -1,
+                      }}
+                    />
+                  )}
+                  {cat.label}
+                </motion.button>
+              );
+            })}
           </div>
         </div>
       </div>
 
       {/* ── Tools Grid ── */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 36 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
         {filteredCategories.map(category => (
           <div key={category.id}>
-            <div style={{ marginBottom: 14 }}>
-              <h3 style={{ fontSize: 18, fontWeight: 600, color: 'var(--text-primary)' }}>
+            <div style={{ marginBottom: 12 }}>
+              <h3 style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
                 {category.title}
               </h3>
               <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>
@@ -270,67 +278,67 @@ export default function ToolsHub({ onSelectTool }) {
             <div style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-              gap: 16,
+              gap: 14,
             }}>
               {category.tools.map(tool => {
                 const IconComponent = tool.icon;
                 return (
                   <motion.div
                     key={tool.id}
-                    whileHover={{ y: -4, scale: 1.01 }}
-                    whileTap={{ scale: 0.98 }}
+                    whileHover={{ y: -2 }}
+                    whileTap={{ scale: 0.985 }}
+                    transition={{ type: 'spring', stiffness: 400, damping: 28 }}
                     onClick={() => onSelectTool(tool.id)}
                     className="glass-panel"
                     style={{
-                      padding: '20px',
+                      padding: '18px',
                       cursor: 'pointer',
                       display: 'flex',
                       flexDirection: 'column',
                       justifyContent: 'space-between',
-                      borderRadius: 16,
+                      borderRadius: 'var(--radius-lg)',
                       border: '1px solid var(--glass-border)',
-                      transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
+                      background: 'var(--surface-card)',
+                      boxShadow: 'var(--shadow-sm)',
                       position: 'relative',
-                      overflow: 'hidden',
                     }}
                   >
                     <div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                         <div style={{
-                          width: 44, height: 44, borderRadius: 12,
-                          background: `${tool.color}15`,
+                          width: 38, height: 38, borderRadius: 10,
+                          background: 'var(--accent-soft)',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          color: tool.color,
+                          color: 'var(--text-primary)',
                         }}>
-                          <IconComponent size={22} />
+                          <IconComponent size={18} strokeWidth={1.75} />
                         </div>
                         <span style={{
-                          fontSize: 10, fontWeight: 600,
-                          padding: '3px 8px', borderRadius: 10,
-                          background: 'var(--glass-border)',
+                          fontSize: 10, fontWeight: 500,
+                          padding: '2px 8px', borderRadius: 6,
+                          background: 'var(--bg-subtle)',
                           color: 'var(--text-secondary)',
-                          textTransform: 'uppercase',
-                          letterSpacing: '0.04em',
+                          letterSpacing: '0.02em',
                         }}>
                           {tool.badge}
                         </span>
                       </div>
 
-                      <h4 style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>
+                      <h4 style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 4, letterSpacing: '-0.01em' }}>
                         {tool.name}
                       </h4>
-                      <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.45 }}>
+                      <p style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.45 }}>
                         {tool.desc}
                       </p>
                     </div>
 
                     <div style={{
-                      marginTop: 18, paddingTop: 12, borderTop: '1px solid var(--glass-border)',
+                      marginTop: 14, paddingTop: 10, borderTop: '1px solid var(--glass-border)',
                       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                      fontSize: 12, fontWeight: 600, color: tool.color,
+                      fontSize: 12, fontWeight: 500, color: 'var(--text-primary)',
                     }}>
                       <span>Launch Tool</span>
-                      <ArrowRight size={14} />
+                      <ArrowRight size={13} color="var(--text-tertiary)" />
                     </div>
                   </motion.div>
                 );
