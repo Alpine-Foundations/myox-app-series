@@ -242,8 +242,8 @@ export default function App() {
           borderRadius: 'var(--radius-md)', padding: 3, gap: 3, position: 'relative',
         }}>
           {[
-            { id: 'reader', label: 'Quick Reader', icon: BookOpen },
-            { id: 'tools', label: 'All Free Tools', icon: Wand2 },
+            { id: 'reader', label: 'Document Viewer', icon: BookOpen },
+            { id: 'tools', label: 'PDF Utilities', icon: Wand2 },
           ].map(tab => {
             const Icon = tab.icon;
             const isSelected = activeTab === tab.id;
@@ -302,7 +302,7 @@ export default function App() {
               fontWeight: 500, gap: 6,
             }}
           >
-            <Sparkles size={13} /> Demo Document
+            <Sparkles size={13} /> Sample Guide
           </motion.button>
 
           <motion.button
@@ -389,10 +389,10 @@ export default function App() {
                 </motion.div>
                 
                 <h2 style={{ fontSize: 18, fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>
-                  {isDragging ? 'Release to open document' : 'Open a PDF document'}
+                  {isDragging ? 'Release to open document' : 'Open a document'}
                 </h2>
                 <p style={{ marginTop: 6, color: 'var(--text-secondary)', fontSize: 13, textAlign: 'center', lineHeight: 1.5 }}>
-                  Drag and drop your file here, or click to browse.
+                  Drop your PDF file here, or browse from your computer.
                 </p>
 
                 {/* 1-Click Interactive Demo Button */}
@@ -416,13 +416,13 @@ export default function App() {
                 >
                   <Sparkles size={14} color="var(--text-primary)" />
                   <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-primary)' }}>
-                    Open Sample Demo Document
+                    Explore Sample Guide Document
                   </span>
                   <ArrowRight size={13} color="var(--text-secondary)" />
                 </motion.div>
                 
                 <div style={{ marginTop: 24, display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--text-tertiary)' }}>
-                  <ShieldCheck size={13} /> 100% Client-Side Privacy: GPU-accelerated & zero server uploads.
+                  <ShieldCheck size={13} /> Client-Side Processing • Your files never leave your device
                 </div>
               </motion.div>
 
@@ -431,7 +431,7 @@ export default function App() {
                 <div style={{ width: '100%', marginTop: 24 }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, padding: '0 4px' }}>
                     <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <Clock size={12} /> Recent Activity
+                      <Clock size={12} /> Recent Documents
                     </span>
                     <button
                       className="btn"

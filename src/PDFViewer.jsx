@@ -244,21 +244,25 @@ const VirtualPage = memo(function VirtualPage({
             />
 
             {/* Placed signatures on this page */}
-            {pageSigs.map(sig => (
-              <div
-                key={sig.id}
-                style={{
-                  position: 'absolute',
-                  left: sig.x,
-                  top: sig.y,
-                  width: 140,
-                  pointerEvents: 'none',
-                  zIndex: 20,
-                }}
-              >
-                <img src={sig.dataUrl} alt="Signature" style={{ width: '100%', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.15))' }} />
-              </div>
-            ))}
+            {pageSigs.map(sig => {
+              const curLeft = sig.normX !== undefined ? sig.normX * pageWidth : sig.x;
+              const curTop = sig.normY !== undefined ? sig.normY * placeholderH : sig.y;
+              return (
+                <div
+                  key={sig.id}
+                  style={{
+                    position: 'absolute',
+                    left: curLeft,
+                    top: curTop,
+                    width: Math.max(80, 140 * scale),
+                    pointerEvents: 'none',
+                    zIndex: 20,
+                  }}
+                >
+                  <img src={sig.dataUrl} alt="Signature" style={{ width: '100%', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.15))' }} />
+                </div>
+              );
+            })}
 
             {/* In-Viewer Annotation Overlay */}
             <PDFAnnotationOverlay
@@ -778,10 +782,11 @@ export default function PDFViewer({
       try {
         const fileBuffer = await file.arrayBuffer();
         const pdfDoc = await PDFDocument.load(fileBuffer, { ignoreEncryption: true });
-        const font = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+        const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+        const fontRegular = await pdfDoc.embedFont(StandardFonts.Helvetica);
         const pages = pdfDoc.getPages();
 
-        // Bake digital signatures
+        // 1. Bake digital signatures
         for (const sig of placedSignatures) {
           const targetPage = pages[sig.pageNumber - 1];
           if (!targetPage) continue;
@@ -796,12 +801,13 @@ export default function PDFViewer({
           const embeddedSig = await pdfDoc.embedPng(sigBytes);
           const { width: pageW, height: pageH } = targetPage.getSize();
 
-          const scaleRatio = pageW / (pageWidth || 600);
-          const sigW = 140 * scaleRatio;
-          const sigH = (140 * (embeddedSig.height / embeddedSig.width)) * scaleRatio;
+          const normX = sig.normX !== undefined ? sig.normX : (sig.x / (pageWidth || 600));
+          const normY = sig.normY !== undefined ? sig.normY : (sig.y / ((pageWidth || 600) * DEFAULT_AR));
+          const sigW = Math.min(pageW * 0.35, 140 * (pageW / 600));
+          const sigH = (sigW * (embeddedSig.height / embeddedSig.width));
 
-          const sigX = sig.x * scaleRatio;
-          const sigY = pageH - (sig.y * scaleRatio) - sigH;
+          const sigX = normX * pageW;
+          const sigY = pageH - (normY * pageH) - sigH;
 
           targetPage.drawImage(embeddedSig, {
             x: Math.max(0, sigX),
@@ -811,32 +817,129 @@ export default function PDFViewer({
           });
         }
 
-        // Bake text block annotations
-        for (const ann of annotations) {
-          if (ann.type === 'text' && ann.content) {
-            const targetPage = pages[ann.pageNumber - 1];
-            if (!targetPage) continue;
-            const { width: pageW, height: pageH } = targetPage.getSize();
-            const scaleRatio = pageW / (pageWidth || 600);
+        // 2. Bake Annotations per page (Text blocks, Shapes, Freehand Drawings)
+        for (let pIdx = 0; pIdx < pages.length; pIdx++) {
+          const pageNum = pIdx + 1;
+          const targetPage = pages[pIdx];
+          const { width: pageW, height: pageH } = targetPage.getSize();
+          const pageAnns = annotations.filter(a => a.pageNumber === pageNum);
+          if (pageAnns.length === 0) continue;
 
-            const hex = (ann.color || '#ff0055').replace('#', '');
-            const r = parseInt(hex.substring(0, 2), 16) / 255 || 0;
-            const g = parseInt(hex.substring(2, 4), 16) / 255 || 0;
-            const b = parseInt(hex.substring(4, 6), 16) / 255 || 0;
+          // Text blocks
+          for (const ann of pageAnns) {
+            if (ann.type === 'text' && ann.content) {
+              const normX = ann.normX !== undefined ? ann.normX : (ann.x / (pageWidth || 600));
+              const normY = ann.normY !== undefined ? ann.normY : (ann.y / ((pageWidth || 600) * DEFAULT_AR));
+              const fontSizePts = (ann.fontSize || 15) * (pageW / 600);
 
-            targetPage.drawText(ann.content, {
-              x: ann.x * scaleRatio,
-              y: pageH - (ann.y * scaleRatio) - 16,
-              size: (ann.fontSize || 16) * scaleRatio,
-              font,
-              color: rgb(r, g, b),
+              const hex = (ann.color || '#18181b').replace('#', '');
+              const r = parseInt(hex.substring(0, 2), 16) / 255 || 0;
+              const g = parseInt(hex.substring(2, 4), 16) / 255 || 0;
+              const b = parseInt(hex.substring(4, 6), 16) / 255 || 0;
+
+              targetPage.drawText(ann.content, {
+                x: Math.max(0, normX * pageW),
+                y: Math.max(0, pageH - (normY * pageH) - fontSizePts),
+                size: fontSizePts,
+                font: ann.isBold ? fontBold : fontRegular,
+                color: rgb(r, g, b),
+              });
+            }
+          }
+
+          // Rasterize Freehand Strokes & Shapes to a crisp 2x DPI canvas overlay
+          const nonTextAnns = pageAnns.filter(a => a.type === 'draw' || a.type === 'shape');
+          if (nonTextAnns.length > 0) {
+            const bakeCanvas = document.createElement('canvas');
+            const dpr = 2;
+            bakeCanvas.width = Math.round(pageW * dpr);
+            bakeCanvas.height = Math.round(pageH * dpr);
+            const bCtx = bakeCanvas.getContext('2d');
+            bCtx.scale(dpr, dpr);
+
+            for (const item of nonTextAnns) {
+              if (item.type === 'draw' && item.points && item.points.length > 1) {
+                bCtx.save();
+                bCtx.globalAlpha = item.opacity || 1.0;
+                bCtx.strokeStyle = item.color || '#2563eb';
+                bCtx.lineWidth = (item.strokeWidth || 3) * (pageW / 600);
+                bCtx.lineCap = 'round';
+                bCtx.lineJoin = 'round';
+                bCtx.beginPath();
+                const p0 = item.points[0];
+                const sx = (p0.normX !== undefined ? p0.normX * pageW : p0.x * (pageW / 600));
+                const sy = (p0.normY !== undefined ? p0.normY * pageH : p0.y * (pageH / 800));
+                bCtx.moveTo(sx, sy);
+                for (let i = 1; i < item.points.length; i++) {
+                  const pt = item.points[i];
+                  const px = (pt.normX !== undefined ? pt.normX * pageW : pt.x * (pageW / 600));
+                  const py = (pt.normY !== undefined ? pt.normY * pageH : pt.y * (pageH / 800));
+                  bCtx.lineTo(px, py);
+                }
+                bCtx.stroke();
+                bCtx.restore();
+              } else if (item.type === 'shape') {
+                const sX = (item.normX !== undefined ? item.normX * pageW : item.x * (pageW / 600));
+                const sY = (item.normY !== undefined ? item.normY * pageH : item.y * (pageH / 800));
+                const sW = (item.normWidth !== undefined ? item.normWidth * pageW : (item.width || 120) * (pageW / 600));
+                const sH = (item.normHeight !== undefined ? item.normHeight * pageH : (item.height || 60) * (pageH / 800));
+
+                bCtx.save();
+                bCtx.globalAlpha = item.opacity || 1.0;
+                bCtx.strokeStyle = item.color || '#2563eb';
+                bCtx.lineWidth = (item.strokeWidth || 3) * (pageW / 600);
+
+                if (item.shapeType === 'rect') {
+                  bCtx.strokeRect(sX, sY, sW, sH);
+                  bCtx.fillStyle = item.color || '#2563eb';
+                  bCtx.globalAlpha = (item.opacity || 1.0) * 0.1;
+                  bCtx.fillRect(sX, sY, sW, sH);
+                } else if (item.shapeType === 'circle') {
+                  bCtx.beginPath();
+                  bCtx.ellipse(sX + sW / 2, sY + sH / 2, sW / 2, sH / 2, 0, 0, Math.PI * 2);
+                  bCtx.stroke();
+                  bCtx.fillStyle = item.color || '#2563eb';
+                  bCtx.globalAlpha = (item.opacity || 1.0) * 0.1;
+                  bCtx.fill();
+                } else if (item.shapeType === 'arrow') {
+                  bCtx.beginPath();
+                  bCtx.moveTo(sX + 10, sY + sH - 10);
+                  bCtx.lineTo(sX + sW - 10, sY + 10);
+                  bCtx.stroke();
+                  const angle = Math.atan2(10 - (sY + sH - 10), (sX + sW - 10) - (sX + 10));
+                  const headLen = 14;
+                  bCtx.beginPath();
+                  bCtx.moveTo(sX + sW - 10, sY + 10);
+                  bCtx.lineTo(sX + sW - 10 - headLen * Math.cos(angle - Math.PI / 6), sY + 10 - headLen * Math.sin(angle - Math.PI / 6));
+                  bCtx.lineTo(sX + sW - 10 - headLen * Math.cos(angle + Math.PI / 6), sY + 10 - headLen * Math.sin(angle + Math.PI / 6));
+                  bCtx.closePath();
+                  bCtx.fillStyle = item.color || '#2563eb';
+                  bCtx.fill();
+                } else if (item.shapeType === 'line') {
+                  bCtx.beginPath();
+                  bCtx.moveTo(sX, sY + sH / 2);
+                  bCtx.lineTo(sX + sW, sY + sH / 2);
+                  bCtx.stroke();
+                }
+                bCtx.restore();
+              }
+            }
+
+            const pngBlob = await new Promise(res => bakeCanvas.toBlob(res, 'image/png'));
+            const pngBuf = await pngBlob.arrayBuffer();
+            const embeddedOverlay = await pdfDoc.embedPng(new Uint8Array(pngBuf));
+            targetPage.drawImage(embeddedOverlay, {
+              x: 0,
+              y: 0,
+              width: pageW,
+              height: pageH,
             });
           }
         }
 
         const signedBytes = await pdfDoc.save();
         const exportName = customDocName || file.name || 'document.pdf';
-        downloadFile(signedBytes, exportName.startsWith('signed_') ? exportName : `signed_${exportName}`);
+        downloadFile(signedBytes, exportName.startsWith('annotated_') ? exportName : `annotated_${exportName}`);
         return;
       } catch (err) {
         console.error('Error baking annotations into PDF:', err);
@@ -877,8 +980,12 @@ export default function PDFViewer({
   const handlePageClick = (e, pageNumber) => {
     if (!pendingSignature) return;
     const rect = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX - rect.left - 70;
-    const y = e.clientY - rect.top - 35;
+    const curW = rect.width || pageWidth || 600;
+    const curH = rect.height || (pageWidth * DEFAULT_AR) || 800;
+    const rawX = e.clientX - rect.left - 70;
+    const rawY = e.clientY - rect.top - 35;
+    const normX = Math.max(0, Math.min(1, rawX / curW));
+    const normY = Math.max(0, Math.min(1, rawY / curH));
 
     recordSnapshot();
     setPlacedSignatures(prev => [
@@ -886,8 +993,10 @@ export default function PDFViewer({
       {
         id: `sig-${Date.now()}`,
         pageNumber,
-        x: Math.max(10, x),
-        y: Math.max(10, y),
+        normX,
+        normY,
+        x: Math.max(10, rawX),
+        y: Math.max(10, rawY),
         dataUrl: pendingSignature,
       }
     ]);

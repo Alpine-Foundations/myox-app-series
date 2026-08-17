@@ -1,155 +1,253 @@
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 
 /**
- * Creates an interactive sample demo document in-memory for instant testing.
+ * Generates a production-grade, multi-page Interactive User Manual & Playground Document.
  */
 export async function createDemoPDFDocument() {
   const pdfDoc = await PDFDocument.create();
   const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
   const fontRegular = await pdfDoc.embedFont(StandardFonts.Helvetica);
-  const fontTimes = await pdfDoc.embedFont(StandardFonts.TimesRoman);
+  const fontOblique = await pdfDoc.embedFont(StandardFonts.HelveticaOblique);
 
-  // ── Page 1: Overview & Feature Highlights ──
-  const page1 = pdfDoc.addPage([595.28, 841.89]); // A4
-  page1.drawText('Alpine Document — Next-Gen PDF Suite', {
-    x: 48,
-    y: 780,
-    size: 22,
-    font: fontBold,
-    color: rgb(0, 0.44, 0.89),
+  // ── Color Palette ──
+  const cDark = rgb(0.09, 0.09, 0.11);
+  const cMuted = rgb(0.44, 0.44, 0.48);
+  const cAccent = rgb(0.09, 0.09, 0.11);
+  const cBlue = rgb(0.14, 0.39, 0.92);
+  const cBorder = rgb(0.85, 0.85, 0.88);
+  const cFill = rgb(0.96, 0.96, 0.98);
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // PAGE 1: USER GUIDE & ARCHITECTURE OVERVIEW
+  // ══════════════════════════════════════════════════════════════════════════
+  const page1 = pdfDoc.addPage([595.28, 841.89]); // A4 format
+
+  // Top Header Banner
+  page1.drawRectangle({
+    x: 48, y: 760, width: 499, height: 44,
+    color: cFill, borderColor: cBorder, borderWidth: 1,
+  });
+  page1.drawText('ALPINE DOCUMENT — USER MANUAL & SYSTEM GUIDE', {
+    x: 64, y: 778, size: 10, font: fontBold, color: cMuted,
   });
 
-  page1.drawText('Interactive Demo Document for Testing All Studio Features', {
-    x: 48,
-    y: 752,
-    size: 13,
-    font: fontRegular,
-    color: rgb(0.3, 0.35, 0.4),
+  // Main Title
+  page1.drawText('Client-Side Document Workspace', {
+    x: 48, y: 715, size: 24, font: fontBold, color: cDark,
+  });
+  page1.drawText('A private, hardware-accelerated PDF reader and annotation suite.', {
+    x: 48, y: 692, size: 12, font: fontRegular, color: cMuted,
   });
 
+  // Section 1: Privacy & Processing Model
+  page1.drawText('1. Architecture & Privacy Architecture', {
+    x: 48, y: 648, size: 14, font: fontBold, color: cDark,
+  });
   page1.drawLine({
-    start: { x: 48, y: 738 },
-    end: { x: 545, y: 738 },
-    thickness: 1.5,
-    color: rgb(0, 0.44, 0.89),
+    start: { x: 48, y: 638 }, end: { x: 547, y: 638 },
+    thickness: 0.75, color: cBorder,
   });
 
-  const body1 = [
-    'Welcome to Alpine Document Lab! You can test all new features directly in this document:',
+  const p1Text = [
+    'Alpine Document processes all documents entirely within your local browser sandbox.',
+    'No files, images, signatures, or annotations are ever transmitted to external cloud servers.',
     '',
-    '1. Universal Undo / Redo: Use Ctrl+Z and Ctrl+Y (or the navbar Undo/Redo buttons) to step back and forth.',
-    '2. Inline Title Rename: Click the Pencil icon next to the title in the top navbar to rename the file.',
-    '3. Ultra-Fast Search with Neon Glow: Press Ctrl+F and type "Alpine" or "Security" to see instant jumping.',
-    '4. Annotations Studio: Click the "Annotate" button in the toolbar to draw with freehand pen, use highlighters,',
-    '   drop sticky note comments, insert text blocks, and draw rectangles, circles, or arrows.',
-    '5. Digital E-Sign: Open "Tools > E-Sign Signature" to draw or type Google calligraphy signatures.',
-    '6. Watermarks & Eye-Care Shading: Open "Tools > Watermark & Tint" to apply stamps or soft sepia reading tints.',
-    '7. Book-Style Page Numbering: Open "Tools > Page Numbers" to add capsule pills, ribbon tabs, or Roman numerals.',
-    '8. Compress PDF & Share: Shrink file size in browser memory and share via AirDrop, Email, or WhatsApp.',
+    '• Zero Server Uploads: All rendering, rotation, compression, and page manipulation run in memory.',
+    '• Hardware Accelerated: PDF text and vector graphics are rasterized at native display density.',
+    '• Non-Destructive Layering: Annotations and signature seals remain editable until document export.',
+    '• Universal History Stack: Full multi-level Undo (Ctrl+Z) and Redo (Ctrl+Y) across all operations.',
   ];
 
-  let yOffset = 700;
-  for (const line of body1) {
+  let y = 618;
+  for (const line of p1Text) {
     page1.drawText(line, {
-      x: 48,
-      y: yOffset,
-      size: 11,
-      font: line.startsWith('1.') || line.startsWith('2.') || line.startsWith('3.') || line.startsWith('4.') || line.startsWith('5.') || line.startsWith('6.') || line.startsWith('7.') || line.startsWith('8.') ? fontBold : fontRegular,
-      color: rgb(0.15, 0.15, 0.15),
+      x: 48, y, size: 10.5,
+      font: line.startsWith('•') ? fontBold : fontRegular,
+      color: line.startsWith('•') ? cDark : cMuted,
     });
-    yOffset -= 22;
+    y -= 18;
   }
 
-  // ── Page 2: High Performance Architecture ──
-  const page2 = pdfDoc.addPage([595.28, 841.89]);
-  page2.drawText('Section 2: High Performance Architecture', {
-    x: 48,
-    y: 780,
-    size: 18,
-    font: fontBold,
-    color: rgb(0.1, 0.1, 0.2),
+  // Section 2: Essential Features & Shortcuts
+  y -= 10;
+  page1.drawText('2. Essential Shortcuts & Navigation', {
+    x: 48, y, size: 14, font: fontBold, color: cDark,
   });
-
-  page2.drawText('Confidential Enterprise Documentation & Specifications', {
-    x: 48,
-    y: 755,
-    size: 12,
-    font: fontTimes,
-    color: rgb(0.5, 0.2, 0.2),
+  y -= 10;
+  page1.drawLine({
+    start: { x: 48, y }, end: { x: 547, y },
+    thickness: 0.75, color: cBorder,
   });
+  y -= 20;
 
-  const body2 = [
-    'The Alpine Document platform is engineered for high-throughput browser-based document processing.',
-    'By leveraging Web Workers and direct client-side buffer transformations via PDF-Lib and WebAssembly,',
-    'documents are manipulated in-memory without ever being uploaded to external cloud servers.',
-    '',
-    'Key Capabilities Verified in Lab Branch:',
-    '• Search Engine: Pre-indexes textual layout and delivers instantaneous match jumping with multi-layer neon bloom.',
-    '• Virtualized Viewport: Maintains a low memory footprint by mounting only nearby pages in the DOM.',
-    '• Responsive Two-Page Spread: Adapts fluidly to wide desktop monitors and split screens.',
-    '• Non-Destructive Annotation Layer: Text blocks, comments, and vector shapes render over native canvas.',
-    '• Universal History Stack: Seamlessly reverts and reapplies any sequence of modifications.',
+  const shortcuts = [
+    { key: 'Ctrl + F', desc: 'Instant In-Document Search with champagne match navigation' },
+    { key: 'Ctrl + Z / Y', desc: 'Universal Undo and Redo for annotations, rotation, and edits' },
+    { key: 'R', desc: 'Rotate page orientation clockwise by 90 degrees' },
+    { key: 'S', desc: 'Toggle sidebar thumbnails, document outline, and text extraction' },
+    { key: 'Eye Menu', desc: 'Switch reading modes: Natural Paper, Warm Sepia, Soft Mint, or OLED Dark' },
   ];
 
-  yOffset = 710;
-  for (const line of body2) {
-    page2.drawText(line, {
-      x: 48,
-      y: yOffset,
-      size: 11,
-      font: line.startsWith('•') || line.startsWith('Key Capabilities') ? fontBold : fontRegular,
-      color: rgb(0.15, 0.15, 0.15),
+  for (const item of shortcuts) {
+    page1.drawRectangle({
+      x: 48, y: y - 3, width: 100, height: 18,
+      color: cFill, borderColor: cBorder, borderWidth: 0.5,
     });
-    yOffset -= 24;
+    page1.drawText(item.key, {
+      x: 54, y: y + 2, size: 9, font: fontBold, color: cDark,
+    });
+    page1.drawText(item.desc, {
+      x: 160, y: y + 2, size: 10, font: fontRegular, color: cMuted,
+    });
+    y -= 24;
   }
 
-  // ── Page 3: Signature & Authorization ──
+  // Footer
+  page1.drawText('Page 1 of 3 — Alpine Document User Guide', {
+    x: 48, y: 40, size: 9, font: fontRegular, color: cMuted,
+  });
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // PAGE 2: ANNOTATION & UTILITIES GUIDE
+  // ══════════════════════════════════════════════════════════════════════════
+  const page2 = pdfDoc.addPage([595.28, 841.89]);
+
+  page2.drawText('Interactive Annotation & Utility Suite', {
+    x: 48, y: 765, size: 20, font: fontBold, color: cDark,
+  });
+  page2.drawText('Complete guide to markups, page organization, and PDF tools.', {
+    x: 48, y: 742, size: 11, font: fontRegular, color: cMuted,
+  });
+  page2.drawLine({
+    start: { x: 48, y: 730 }, end: { x: 547, y: 730 },
+    thickness: 0.75, color: cBorder,
+  });
+
+  // Tools Table Grid
+  const tools = [
+    { title: 'Annotation Studio', desc: 'Freehand pen, text blocks, sticky notes, rectangles, circles, and arrows.' },
+    { title: 'Visual Page Organizer', desc: 'Reorder pages via drag and drop, rotate individual pages, or duplicate.' },
+    { title: 'Split & Extract', desc: 'Extract selected pages as a new PDF or download high-resolution PNG image ZIP.' },
+    { title: 'E-Sign & Stamp Seals', desc: 'Draw vector signatures, type calligraphy fonts, or crop custom seal stamps.' },
+    { title: 'Watermark & Background Tint', desc: 'Add confidential text stamps, logo tiles, or custom reading page shaders.' },
+    { title: 'Document Numbering', desc: 'Add book-style page numbers, capsule pill badges, or header/footer ribbons.' },
+    { title: 'Compress & Optimize', desc: 'Reduce document file size directly in memory with zero loss in visual clarity.' },
+  ];
+
+  y = 690;
+  for (const t of tools) {
+    page2.drawRectangle({
+      x: 48, y: y - 10, width: 499, height: 42,
+      color: rgb(0.98, 0.98, 0.99), borderColor: cBorder, borderWidth: 0.75,
+    });
+    page2.drawText(t.title, {
+      x: 62, y: y + 14, size: 11, font: fontBold, color: cDark,
+    });
+    page2.drawText(t.desc, {
+      x: 62, y: y - 1, size: 9.5, font: fontRegular, color: cMuted,
+    });
+    y -= 52;
+  }
+
+  // Reading Mode Callout
+  y -= 10;
+  page2.drawRectangle({
+    x: 48, y: y - 40, width: 499, height: 60,
+    color: rgb(0.95, 0.97, 1.0), borderColor: rgb(0.8, 0.88, 0.98), borderWidth: 1,
+  });
+  page2.drawText('PRO TIP: EYE-CARE READING MODES', {
+    x: 62, y: y + 4, size: 10, font: fontBold, color: cBlue,
+  });
+  page2.drawText('Click the Eye icon in the top toolbar to switch between Natural Crisp Paper, Warm Sepia,', {
+    x: 62, y: y - 12, size: 9.5, font: fontRegular, color: cDark,
+  });
+  page2.drawText('Soft Mint Glare-Reduction, Cool Slate, or OLED Dark mode without inverting document text.', {
+    x: 62, y: y - 26, size: 9.5, font: fontRegular, color: cDark,
+  });
+
+  page2.drawText('Page 2 of 3 — Alpine Document User Guide', {
+    x: 48, y: 40, size: 9, font: fontRegular, color: cMuted,
+  });
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // PAGE 3: INTERACTIVE PLAYGROUND & SIGNATURE VERIFICATION
+  // ══════════════════════════════════════════════════════════════════════════
   const page3 = pdfDoc.addPage([595.28, 841.89]);
-  page3.drawText('Section 3: Document Verification & Authorization', {
-    x: 48,
-    y: 780,
-    size: 18,
-    font: fontBold,
-    color: rgb(0.1, 0.1, 0.2),
+
+  page3.drawText('Interactive Testing Playground', {
+    x: 48, y: 765, size: 20, font: fontBold, color: cDark,
+  });
+  page3.drawText('Try drawing, placing text, creating shapes, and adding your signature below.', {
+    x: 48, y: 742, size: 11, font: fontRegular, color: cMuted,
+  });
+  page3.drawLine({
+    start: { x: 48, y: 730 }, end: { x: 547, y: 730 },
+    thickness: 0.75, color: cBorder,
   });
 
-  page3.drawText('Place your digital signature or stamp below to authorize this document.', {
-    x: 48,
-    y: 750,
-    size: 12,
-    font: fontRegular,
-    color: rgb(0.3, 0.3, 0.3),
-  });
-
-  // Draw signature placeholder box
+  // Annotation Practice Zone
   page3.drawRectangle({
-    x: 48,
-    y: 540,
-    width: 495,
-    height: 140,
-    borderColor: rgb(0.7, 0.7, 0.75),
-    borderWidth: 1,
+    x: 48, y: 520, width: 499, height: 185,
+    color: rgb(0.99, 0.99, 1.0), borderColor: cBorder, borderWidth: 1,
+  });
+  page3.drawText('ANNOTATION PRACTICE CANVAS', {
+    x: 64, y: 680, size: 10, font: fontBold, color: cMuted,
+  });
+  page3.drawText('Click "Annotate" in the top navbar to test:', {
+    x: 64, y: 658, size: 10, font: fontRegular, color: cDark,
+  });
+  page3.drawText('1. Draw Pen & Highlighter: Smooth freehand strokes and transparent text highlights.', {
+    x: 64, y: 638, size: 9.5, font: fontRegular, color: cMuted,
+  });
+  page3.drawText('2. Text Block: Click anywhere to insert, drag to move, and resize bounding box.', {
+    x: 64, y: 620, size: 9.5, font: fontRegular, color: cMuted,
+  });
+  page3.drawText('3. Geometric Shapes: Insert Rectangles, Circles, and Arrows with drag-handles.', {
+    x: 64, y: 602, size: 9.5, font: fontRegular, color: cMuted,
+  });
+  page3.drawText('4. Sticky Notes: Add collapsible reviewer comments with timestamps and resolve state.', {
+    x: 64, y: 584, size: 9.5, font: fontRegular, color: cMuted,
   });
 
-  page3.drawText('AUTHORIZED SIGNATURE / SEAL BOX', {
-    x: 68,
-    y: 650,
-    size: 10,
-    font: fontBold,
-    color: rgb(0.5, 0.5, 0.55),
+  // Signature Certification Box
+  page3.drawRectangle({
+    x: 48, y: 310, width: 499, height: 175,
+    color: rgb(1.0, 1.0, 1.0), borderColor: cDark, borderWidth: 1.25,
+  });
+  page3.drawText('DOCUMENT CERTIFICATION & SIGNATURE ZONE', {
+    x: 64, y: 460, size: 11, font: fontBold, color: cDark,
+  });
+  page3.drawText('This area is designated for placing your digital vector signature or company stamp seal.', {
+    x: 64, y: 442, size: 9.5, font: fontRegular, color: cMuted,
   });
 
-  page3.drawText('Click "Tools > E-Sign Signature" or "Annotate" in the navbar above to place a signature here.', {
-    x: 68,
-    y: 620,
-    size: 10,
-    font: fontRegular,
-    color: rgb(0.4, 0.4, 0.45),
+  // Signature Placement Target Box
+  page3.drawRectangle({
+    x: 64, y: 330, width: 220, height: 85,
+    color: cFill, borderColor: cBorder, borderWidth: 1,
+  });
+  page3.drawText('SIGN HERE (Click "Tools > E-Sign")', {
+    x: 80, y: 370, size: 9, font: fontBold, color: cMuted,
+  });
+
+  // Stamp Seal Target Box
+  page3.drawRectangle({
+    x: 300, y: 330, width: 230, height: 85,
+    color: cFill, borderColor: cBorder, borderWidth: 1,
+  });
+  page3.drawText('OFFICIAL STAMP / SEAL (Circular / Oval)', {
+    x: 316, y: 370, size: 9, font: fontBold, color: cMuted,
+  });
+
+  // Verification Note
+  page3.drawText('All placed signatures and annotations are baked with native resolution upon clicking Download.', {
+    x: 48, y: 275, size: 9.5, font: fontOblique, color: cMuted,
+  });
+
+  page3.drawText('Page 3 of 3 — Alpine Document User Guide', {
+    x: 48, y: 40, size: 9, font: fontRegular, color: cMuted,
   });
 
   const pdfBytes = await pdfDoc.save();
-  return new File([pdfBytes], 'Alpine_Document_Lab_Demo.pdf', {
-    type: 'application/pdf',
-    lastModified: Date.now(),
-  });
+  return new File([pdfBytes], 'Alpine_Document_User_Guide.pdf', { type: 'application/pdf' });
 }
