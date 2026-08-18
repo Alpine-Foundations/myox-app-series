@@ -1,0 +1,59 @@
+{
+  "name": "MyOxia Document — Private PDF Studio",
+  "short_name": "MyOxia PDF",
+  "description": "Private, client-side PDF reader, annotation studio, e-sign, and document organizer with zero server uploads.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#09090b",
+  "theme_color": "#09090b",
+  "categories": ["productivity", "utilities", "business"],
+  "icons": [
+    {
+      "src": "./favicon.png",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/png"
+    },
+    {
+      "src": "./icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./apple-touch-icon.png",
+      "type": "image/png",
+      "sizes": "180x180"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Open Document",
+      "short_name": "Viewer",
+      "description": "Read and annotate PDF documents",
+      "url": "./",
+      "icons": [{ "src": "./icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "E-Sign & Stamp",
+      "short_name": "Sign",
+      "description": "Sign contracts and documents with vector ink",
+      "url": "./#tools",
+      "icons": [{ "src": "./icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Organize Pages",
+      "short_name": "Organize",
+      "description": "Reorder, rotate, and duplicate pages visually",
+      "url": "./#tools",
+      "icons": [{ "src": "./icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}

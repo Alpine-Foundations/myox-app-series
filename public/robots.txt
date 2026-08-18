@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://alpine-foundations.github.io/myox-app-series/sitemap.xml

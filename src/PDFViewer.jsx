@@ -372,9 +372,14 @@ export default function PDFViewer({
   const heightCache     = useRef({});
   const pageTextCache   = useRef(new Map());
   const toolsMenuRef    = useRef(null);  // for click-outside dismissal
-  const readingMenuRef  = useRef(null);  // for click-outside dismissal
-
   const [renderCenter, setRenderCenter] = useState(1);
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Focus rename input on rename mode
   useEffect(() => {
@@ -1306,6 +1311,11 @@ export default function PDFViewer({
       >
         {/* Left Controls */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <img 
+            src="./favicon.png" 
+            alt="MyOxia" 
+            style={{ width: 22, height: 22, borderRadius: 6, objectFit: 'contain', background: 'var(--accent-soft)', padding: 1 }} 
+          />
           <motion.button
             className="btn"
             onClick={onClose}
@@ -1963,6 +1973,87 @@ export default function PDFViewer({
           )}
         </main>
       </div>
+
+      {/* ── Mobile Floating Bottom Action Bar ── */}
+      {isMobile && (
+        <motion.div
+          initial={{ y: 80, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ type: 'spring', stiffness: 350, damping: 28 }}
+          className="glass-panel"
+          style={{
+            position: 'fixed',
+            bottom: 'max(12px, env(safe-area-inset-bottom))',
+            left: 12,
+            right: 12,
+            height: 50,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-around',
+            padding: '0 8px',
+            zIndex: 150,
+            borderRadius: 'var(--radius-lg)',
+            boxShadow: 'var(--shadow-lg)',
+            background: 'var(--surface-card)',
+          }}
+        >
+          {/* Page Controls */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <motion.button whileTap={{ scale: 0.9 }} className="btn" onClick={() => scrollToPage(currentPage - 1)} style={{ padding: 6 }}>
+              <ChevronUp size={16} color="var(--text-secondary)" />
+            </motion.button>
+            <span style={{ fontSize: 12, fontWeight: 600, minWidth: 44, textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>
+              {currentPage}/{numPages || 1}
+            </span>
+            <motion.button whileTap={{ scale: 0.9 }} className="btn" onClick={() => scrollToPage(currentPage + 1)} style={{ padding: 6 }}>
+              <ChevronDown size={16} color="var(--text-secondary)" />
+            </motion.button>
+          </div>
+
+          <div style={{ width: 1, height: 20, background: 'var(--glass-border)' }} />
+
+          {/* Zoom */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <motion.button whileTap={{ scale: 0.9 }} className="btn" onClick={zoomOut} style={{ padding: 6 }}>
+              <ZoomOut size={16} color="var(--text-secondary)" />
+            </motion.button>
+            <motion.button whileTap={{ scale: 0.9 }} className="btn" onClick={zoomIn} style={{ padding: 6 }}>
+              <ZoomIn size={16} color="var(--text-secondary)" />
+            </motion.button>
+          </div>
+
+          <div style={{ width: 1, height: 20, background: 'var(--glass-border)' }} />
+
+          {/* Annotate */}
+          <motion.button
+            whileTap={{ scale: 0.9 }}
+            className="btn"
+            onClick={() => {
+              setIsAnnotateMode(v => !v);
+              if (!isAnnotateMode) setActiveAnnotateTool('pen');
+              else setActiveAnnotateTool(null);
+            }}
+            style={{
+              padding: '6px 10px',
+              background: isAnnotateMode ? 'var(--accent)' : 'transparent',
+              color: isAnnotateMode ? 'var(--bg-color)' : 'var(--text-primary)',
+              borderRadius: 'var(--radius-sm)',
+            }}
+          >
+            <Edit3 size={15} />
+          </motion.button>
+
+          {/* Tools Menu */}
+          <motion.button
+            whileTap={{ scale: 0.9 }}
+            className="btn btn-soft"
+            onClick={() => setShowToolsMenu(v => !v)}
+            style={{ padding: '6px 10px', borderRadius: 'var(--radius-sm)', gap: 4, fontSize: 12, fontWeight: 600 }}
+          >
+            <Wand2 size={15} /> Tools
+          </motion.button>
+        </motion.div>
+      )}
     </div>
   );
 }

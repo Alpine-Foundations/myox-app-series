@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap');
 
 /* ── Spinner ── */
 @keyframes spin {
@@ -47,8 +47,8 @@
   --text-secondary: #71717a;
   --text-tertiary: #a1a1aa;
   
-  --glass-bg: rgba(255, 255, 255, 0.78);
-  --glass-bg-hover: rgba(255, 255, 255, 0.95);
+  --glass-bg: rgba(255, 255, 255, 0.82);
+  --glass-bg-hover: rgba(255, 255, 255, 0.96);
   --glass-border: rgba(0, 0, 0, 0.07);
   --glass-border-focus: rgba(24, 24, 27, 0.25);
   
@@ -62,13 +62,17 @@
   --accent-soft: rgba(24, 24, 27, 0.06);
   --accent-border: rgba(24, 24, 27, 0.12);
   
+  --orb-color-1: rgba(99, 102, 241, 0.06);
+  --orb-color-2: rgba(56, 189, 248, 0.05);
+  --orb-color-3: rgba(236, 72, 153, 0.04);
+  
   --radius-xs: 6px;
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 18px;
   --radius-xl: 24px;
   
-  --font-main: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+  --font-main: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
 }
 
 [data-theme="dark"] {
@@ -79,7 +83,7 @@
   --text-secondary: #a1a1aa;
   --text-tertiary: #71717a;
   
-  --glass-bg: rgba(20, 22, 27, 0.75);
+  --glass-bg: rgba(20, 22, 27, 0.78);
   --glass-bg-hover: rgba(26, 29, 36, 0.92);
   --glass-border: rgba(255, 255, 255, 0.08);
   --glass-border-focus: rgba(244, 244, 245, 0.35);
@@ -93,6 +97,10 @@
   --accent-hover: #ffffff;
   --accent-soft: rgba(244, 244, 245, 0.08);
   --accent-border: rgba(244, 244, 245, 0.16);
+
+  --orb-color-1: rgba(99, 102, 241, 0.12);
+  --orb-color-2: rgba(56, 189, 248, 0.08);
+  --orb-color-3: rgba(236, 72, 153, 0.07);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -104,7 +112,7 @@
     --text-secondary: #a1a1aa;
     --text-tertiary: #71717a;
     
-    --glass-bg: rgba(20, 22, 27, 0.75);
+    --glass-bg: rgba(20, 22, 27, 0.78);
     --glass-bg-hover: rgba(26, 29, 36, 0.92);
     --glass-border: rgba(255, 255, 255, 0.08);
     --glass-border-focus: rgba(244, 244, 245, 0.35);
@@ -118,6 +126,10 @@
     --accent-hover: #ffffff;
     --accent-soft: rgba(244, 244, 245, 0.08);
     --accent-border: rgba(244, 244, 245, 0.16);
+
+    --orb-color-1: rgba(99, 102, 241, 0.12);
+    --orb-color-2: rgba(56, 189, 248, 0.08);
+    --orb-color-3: rgba(236, 72, 153, 0.07);
   }
 }
 
@@ -138,6 +150,59 @@ body {
   -moz-osx-font-smoothing: grayscale;
   overflow: hidden;
   letter-spacing: -0.01em;
+  position: relative;
+  touch-action: manipulation;
+}
+
+/* ── Complex Ambient Floating Mesh Animations ── */
+.ambient-mesh-container {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+
+@keyframes floatOrb1 {
+  0%   { transform: translate(0px, 0px) scale(1); }
+  33%  { transform: translate(60px, -80px) scale(1.15); }
+  66%  { transform: translate(-40px, 50px) scale(0.9); }
+  100% { transform: translate(0px, 0px) scale(1); }
+}
+
+@keyframes floatOrb2 {
+  0%   { transform: translate(0px, 0px) scale(1); }
+  33%  { transform: translate(-80px, 60px) scale(0.95); }
+  66%  { transform: translate(50px, -40px) scale(1.12); }
+  100% { transform: translate(0px, 0px) scale(1); }
+}
+
+.ambient-orb-1 {
+  position: absolute;
+  top: -10%;
+  left: 15%;
+  width: 50vw;
+  height: 50vw;
+  max-width: 600px;
+  max-height: 600px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--orb-color-1) 0%, rgba(99, 102, 241, 0) 70%);
+  filter: blur(60px);
+  animation: floatOrb1 24s ease-in-out infinite;
+}
+
+.ambient-orb-2 {
+  position: absolute;
+  bottom: -10%;
+  right: 15%;
+  width: 45vw;
+  height: 45vw;
+  max-width: 540px;
+  max-height: 540px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--orb-color-2) 0%, rgba(56, 189, 248, 0) 70%);
+  filter: blur(60px);
+  animation: floatOrb2 28s ease-in-out infinite;
 }
 
 /* ── Minimal Glass Panels ── */
@@ -148,7 +213,7 @@ body {
   border: 1px solid var(--glass-border);
   box-shadow: var(--shadow-md);
   border-radius: var(--radius-lg);
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
 }
 
 /* ── Tactile Button System ── */
@@ -168,13 +233,14 @@ body {
   font-weight: 500;
   font-size: 13px;
   user-select: none;
+  touch-action: manipulation;
 }
 .btn:hover {
   background: var(--glass-bg-hover);
   border-color: var(--glass-border);
 }
 .btn:active {
-  transform: scale(0.975);
+  transform: scale(0.965);
 }
 .btn:disabled {
   opacity: 0.45;
@@ -195,7 +261,7 @@ body {
   box-shadow: var(--shadow-md);
 }
 .btn-primary:active {
-  transform: scale(0.975) translateY(0);
+  transform: scale(0.965) translateY(0);
 }
 
 .btn-soft {
@@ -213,6 +279,8 @@ body {
   height: 100vh;
   display: flex;
   flex-direction: column;
+  position: relative;
+  z-index: 1;
 }
 
 /* ── Minimal Input Controls ── */
@@ -249,16 +317,15 @@ input[type="range"] {
   border-radius: 99px;
   background: var(--glass-border);
   outline: none;
-  transition: background 0.15s ease;
+  cursor: pointer;
 }
 input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
-  background: var(--text-primary);
-  cursor: pointer;
+  background: var(--accent);
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
   transition: transform 0.1s ease;
 }
@@ -266,87 +333,51 @@ input[type="range"]::-webkit-slider-thumb:hover {
   transform: scale(1.2);
 }
 input[type="range"]::-moz-range-thumb {
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
-  background: var(--text-primary);
-  cursor: pointer;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+  background: var(--accent);
   border: none;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
 }
 
-/* ── PDF Reading Mode Shaders ── */
-.pdf-shader-paper canvas {
-  filter: none !important;
+/* ── Eye-Care Paper Shaders ── */
+.reading-shader-paper canvas {
+  filter: sepia(0.08) contrast(0.96) brightness(1.01);
 }
-.pdf-shader-inverted canvas {
-  filter: invert(0.96) hue-rotate(180deg) contrast(1.12) brightness(0.94);
-  transition: filter 0.2s ease;
+.reading-shader-sepia canvas {
+  filter: sepia(0.38) contrast(0.92) brightness(0.98);
 }
-.pdf-shader-sepia canvas {
-  filter: sepia(0.35) contrast(0.96) brightness(0.97);
-  transition: filter 0.2s ease;
+.reading-shader-mint canvas {
+  filter: hue-rotate(50deg) saturate(0.85) brightness(1.02) contrast(0.95);
 }
-.pdf-shader-mint canvas {
-  filter: hue-rotate(80deg) saturate(0.65) brightness(0.97);
-  transition: filter 0.2s ease;
+.reading-shader-slate canvas {
+  filter: grayscale(0.2) contrast(0.98) brightness(0.96);
 }
-.pdf-shader-slate canvas {
-  filter: saturate(0.15) contrast(1.04) brightness(0.94);
-  transition: filter 0.2s ease;
+.reading-shader-dark canvas {
+  filter: invert(0.92) hue-rotate(180deg) contrast(1.1) brightness(0.95);
 }
 
-/* ── Calm & Clean Champagne Search Highlight Marks (No Flashy Neon) ── */
-mark.pdf-search-match {
-  background-color: #fef08a !important;
-  color: #18181b !important;
-  border-radius: 3px;
-  padding: 1px 4px;
-  display: inline;
-  font-weight: 500;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
-  transition: all 0.15s ease;
-}
-
-mark.active-pdf-match {
+/* ── Calm Champagne Search Highlights ── */
+.pdf-search-highlight-active {
   background-color: #fde047 !important;
-  color: #18181b !important;
-  border-radius: 3px;
-  padding: 1px 5px;
+  color: #000000 !important;
+  border-radius: 2px;
+  box-shadow: 0 0 0 2px #eab308, 0 2px 8px rgba(234, 179, 8, 0.3);
   font-weight: 600;
-  outline: 1.5px solid #ca8a04;
-  box-shadow: 0 2px 8px rgba(202, 138, 4, 0.25);
   z-index: 10;
-  position: relative;
+}
+.pdf-search-highlight-inactive {
+  background-color: rgba(254, 240, 138, 0.65) !important;
+  color: inherit !important;
+  border-radius: 2px;
 }
 
-/* ── Rename Document Title Field ── */
-.doc-title-input {
-  background: var(--glass-bg);
-  border: 1px solid var(--glass-border-focus);
-  color: var(--text-primary);
-  border-radius: var(--radius-xs);
-  padding: 2px 8px;
-  font-size: 13px;
-  font-weight: 500;
-  outline: none;
-  box-shadow: 0 0 0 2px var(--accent-soft);
-}
-
-/* ── PDF Annotation & Comment Layer ── */
-.pdf-annotation-canvas {
-  position: absolute;
-  inset: 0;
-  pointer-events: auto;
-  touch-action: none;
-}
-
+/* ── Sticky Note Pin ── */
 .sticky-note-pin {
-  position: absolute;
-  width: 26px;
-  height: 26px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
-  background: #fde047;
   color: #18181b;
   display: flex;
   align-items: center;
@@ -423,13 +454,72 @@ mark.active-pdf-match {
   background: var(--accent-soft);
 }
 
+/* ── Mobile Browser Quality & Responsive Optimization ── */
+@media (max-width: 768px) {
+  /* Navbar & Safe Area Spacing */
+  nav.glass-panel {
+    top: max(8px, env(safe-area-inset-top)) !important;
+    left: 10px !important;
+    right: 10px !important;
+    height: 50px !important;
+    padding: 0 12px !important;
+  }
+
+  main {
+    padding-top: 72px !important;
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+    padding-bottom: max(24px, env(safe-area-inset-bottom)) !important;
+  }
+
+  /* Two-page spread falls back to single page on mobile screens */
+  .two-page-spread {
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 16px !important;
+  }
+
+  /* Modals transform into modern touch bottom sheets */
+  .modal-overlay {
+    align-items: flex-end !important;
+    padding: 0 !important;
+  }
+
+  .modal-card {
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: 88vh !important;
+    border-radius: 22px 22px 0 0 !important;
+    border-bottom: none !important;
+  }
+
+  /* Expand touch target sizes */
+  .btn {
+    min-height: 38px;
+    font-size: 13px;
+  }
+
+  /* Compact header on mobile PDF viewer */
+  .pdf-viewer-header {
+    top: max(6px, env(safe-area-inset-top)) !important;
+    left: 8px !important;
+    right: 8px !important;
+    padding: 0 8px !important;
+    height: 48px !important;
+  }
+
+  .pdf-viewer-title-box {
+    max-width: 110px !important;
+  }
+}
+
 /* ── Print Media Optimization ── */
 @media print {
   body {
     background: transparent !important;
     overflow: visible !important;
   }
-  nav, aside, .selection-toolbar, .btn {
+  nav, aside, .selection-toolbar, .btn, .ambient-mesh-container {
     display: none !important;
   }
   main {

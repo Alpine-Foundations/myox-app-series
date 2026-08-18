@@ -2,12 +2,78 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Alpine Document — Fast & Private PDF Powerhouse</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover" />
+    
+    <!-- Primary Meta Tags & SEO -->
+    <title>MyOxia Document — Private, Hardware-Accelerated PDF Studio & Reader</title>
+    <meta name="title" content="MyOxia Document — Private, Hardware-Accelerated PDF Studio & Reader" />
+    <meta name="description" content="100% client-side PDF reader, annotation studio, digital e-signature, page organizer, and document compressor. Zero server uploads for absolute privacy." />
+    <meta name="keywords" content="PDF reader, PDF editor, sign PDF, client-side PDF, e-sign signature, organize PDF, merge PDF, split PDF, compress PDF, watermark PDF, privacy PDF studio, PWA PDF app" />
+    <meta name="author" content="MyOxia / Alpine Foundations" />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://alpine-foundations.github.io/myox-app-series/" />
+
+    <!-- Favicon & Brand Icons -->
+    <link rel="icon" type="image/png" sizes="32x32" href="./favicon.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png" />
+    <link rel="shortcut icon" href="./favicon.png" />
+
+    <!-- PWA & Mobile Web App Meta -->
+    <link rel="manifest" href="./manifest.json" />
+    <meta name="theme-color" content="#09090b" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#f8f9fa" media="(prefers-color-scheme: light)" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="MyOxia PDF" />
+    <meta name="format-detection" content="telephone=no" />
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://alpine-foundations.github.io/myox-app-series/" />
+    <meta property="og:title" content="MyOxia Document — Private, Hardware-Accelerated PDF Studio & Reader" />
+    <meta property="og:description" content="Read, annotate, e-sign, organize, and compress PDF documents entirely in your local browser sandbox. Zero data uploads." />
+    <meta property="og:image" content="./logo.png" />
+    <meta property="og:site_name" content="MyOxia Document" />
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content="https://alpine-foundations.github.io/myox-app-series/" />
+    <meta property="twitter:title" content="MyOxia Document — Private, Hardware-Accelerated PDF Studio & Reader" />
+    <meta property="twitter:description" content="Read, annotate, e-sign, organize, and compress PDF documents entirely in your local browser sandbox. Zero data uploads." />
+    <meta property="twitter:image" content="./logo.png" />
+
+    <!-- Fonts Preconnect & Stylesheets -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Alex+Brush&family=Allura&family=Caveat:wght@500;700&family=Dancing+Script:wght@600;700&family=Great+Vibes&family=MonteCarlo&family=Parisienne&family=Sacramento&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Alex+Brush&family=Allura&family=Caveat:wght@500;700&family=Dancing+Script:wght@600;700&family=Great+Vibes&family=MonteCarlo&family=Parisienne&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sacramento&display=swap" rel="stylesheet">
+
+    <!-- JSON-LD Structured Data Schema -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "MyOxia Document",
+      "applicationCategory": "ProductivityApplication",
+      "operatingSystem": "All modern browsers (Chrome, Safari, Firefox, Edge, iOS, Android)",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "description": "Next-generation client-side PDF viewer and utility studio with e-signatures, annotations, page reorganization, compression, and zero server uploads.",
+      "featureList": [
+        "100% Client-Side PDF Processing & Zero Cloud Uploads",
+        "Interactive Annotation Studio with Shapes, Highlighters & Sticky Notes",
+        "Vector E-Signature Studio with Google Calligraphy & Stamp Seals",
+        "Visual Light-Table Page Organizer & Reordering",
+        "In-Memory Document Compression & Optimization",
+        "Book-Style Page Numbering & Reading Tone Shaders"
+      ],
+      "browserRequirements": "Requires WebAssembly and Canvas support."
+    }
+    </script>
   </head>
   <body>
     <div id="root"></div>

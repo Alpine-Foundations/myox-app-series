@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Files, Scissors, LayoutGrid, Image, FileImage, Type,
-  Shield, KeyRound, Sparkles, PenTool, Hash, Stamp,
+  Shield, Sparkles, PenTool, Hash, Stamp,
   Search, ArrowRight, X, ShieldAlert, Cpu
 } from 'lucide-react';
 
@@ -149,6 +149,21 @@ export const TOOLS_CATEGORIES = [
   },
 ];
 
+const containerVariants = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.05,
+    },
+  },
+};
+
+const cardVariants = {
+  hidden: { opacity: 0, y: 14, scale: 0.98 },
+  show: { opacity: 1, y: 0, scale: 1, transition: { type: 'spring', stiffness: 380, damping: 26 } },
+};
+
 export default function ToolsHub({ onSelectTool }) {
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState('all');
@@ -174,9 +189,14 @@ export default function ToolsHub({ onSelectTool }) {
     <div style={{ width: '100%', maxWidth: 1040, margin: '0 auto', padding: '12px 0 60px' }}>
       
       {/* ── Banner Header ── */}
-      <div style={{ textAlign: 'center', marginBottom: 28 }}>
-        <h2 style={{ fontSize: 28, fontWeight: 700, letterSpacing: '-0.03em', color: 'var(--text-primary)' }}>
-          All Free PDF Tools
+      <motion.div 
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ type: 'spring', stiffness: 350, damping: 28 }}
+        style={{ textAlign: 'center', marginBottom: 28 }}
+      >
+        <h2 style={{ fontSize: 28, fontWeight: 800, letterSpacing: '-0.03em', color: 'var(--text-primary)' }}>
+          MyOxia PDF Studio Utilities
         </h2>
         <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 6, maxWidth: 480, margin: '6px auto 0', lineHeight: 1.5 }}>
           GPU-accelerated tools running 100% in your browser with complete privacy.
@@ -225,7 +245,7 @@ export default function ToolsHub({ onSelectTool }) {
                 <motion.button
                   key={cat.id}
                   onClick={() => setActiveCategory(cat.id)}
-                  whileTap={{ scale: 0.97 }}
+                  whileTap={{ scale: 0.96 }}
                   style={{
                     position: 'relative',
                     padding: '5px 12px',
@@ -260,14 +280,14 @@ export default function ToolsHub({ onSelectTool }) {
             })}
           </div>
         </div>
-      </div>
+      </motion.div>
 
-      {/* ── Tools Grid ── */}
+      {/* ── Tools Grid with Staggered Animation ── */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
         {filteredCategories.map(category => (
           <div key={category.id}>
             <div style={{ marginBottom: 12 }}>
-              <h3 style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
+              <h3 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
                 {category.title}
               </h3>
               <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>
@@ -275,19 +295,24 @@ export default function ToolsHub({ onSelectTool }) {
               </p>
             </div>
 
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-              gap: 14,
-            }}>
+            <motion.div 
+              variants={containerVariants}
+              initial="hidden"
+              animate="show"
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
+                gap: 14,
+              }}
+            >
               {category.tools.map(tool => {
                 const IconComponent = tool.icon;
                 return (
                   <motion.div
                     key={tool.id}
-                    whileHover={{ y: -2 }}
-                    whileTap={{ scale: 0.985 }}
-                    transition={{ type: 'spring', stiffness: 400, damping: 28 }}
+                    variants={cardVariants}
+                    whileHover={{ y: -3, scale: 1.015 }}
+                    whileTap={{ scale: 0.98 }}
                     onClick={() => onSelectTool(tool.id)}
                     className="glass-panel"
                     style={{
@@ -314,7 +339,7 @@ export default function ToolsHub({ onSelectTool }) {
                           <IconComponent size={18} strokeWidth={1.75} />
                         </div>
                         <span style={{
-                          fontSize: 10, fontWeight: 500,
+                          fontSize: 10, fontWeight: 600,
                           padding: '2px 8px', borderRadius: 6,
                           background: 'var(--bg-subtle)',
                           color: 'var(--text-secondary)',
@@ -324,7 +349,7 @@ export default function ToolsHub({ onSelectTool }) {
                         </span>
                       </div>
 
-                      <h4 style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 4, letterSpacing: '-0.01em' }}>
+                      <h4 style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 4, letterSpacing: '-0.01em' }}>
                         {tool.name}
                       </h4>
                       <p style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.45 }}>
@@ -335,7 +360,7 @@ export default function ToolsHub({ onSelectTool }) {
                     <div style={{
                       marginTop: 14, paddingTop: 10, borderTop: '1px solid var(--glass-border)',
                       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                      fontSize: 12, fontWeight: 500, color: 'var(--text-primary)',
+                      fontSize: 12, fontWeight: 600, color: 'var(--text-primary)',
                     }}>
                       <span>Launch Tool</span>
                       <ArrowRight size={13} color="var(--text-tertiary)" />
@@ -343,7 +368,7 @@ export default function ToolsHub({ onSelectTool }) {
                   </motion.div>
                 );
               })}
-            </div>
+            </motion.div>
           </div>
         ))}
       </div>

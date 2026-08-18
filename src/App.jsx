@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   UploadCloud, File, Moon, Sun, Clock, Trash2,
-  Wand2, BookOpen, Sparkles, ArrowRight, ShieldCheck
+  Wand2, BookOpen, Sparkles, ArrowRight, ShieldCheck, DownloadCloud
 } from 'lucide-react';
 import PDFViewer from './PDFViewer';
 import ToolsHub from './components/ToolsHub';
@@ -37,7 +37,29 @@ export default function App() {
   const [initialViewerTool, setInitialViewerTool] = useState(null);
   const [initialAnnotate, setInitialAnnotate] = useState(false);
   const [dropToast, setDropToast] = useState('');
+  const [pwaPrompt, setPwaPrompt] = useState(null);
   const fileInputRef = useRef(null);
+
+  // Listen for PWA installation event
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e) => {
+      e.preventDefault();
+      setPwaPrompt(e);
+    };
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+  }, []);
+
+  const handleInstallPWA = async () => {
+    if (!pwaPrompt) return;
+    pwaPrompt.prompt();
+    const { outcome } = await pwaPrompt.userChoice;
+    if (outcome === 'accepted') {
+      setPwaPrompt(null);
+      setDropToast('MyOxia App installed successfully!');
+      setTimeout(() => setDropToast(''), 3000);
+    }
+  };
 
   const [recentFiles, setRecentFiles] = useState(() => {
     try {
@@ -156,11 +178,17 @@ export default function App() {
 
   return (
     <div 
-      style={{ display: 'flex', flexDirection: 'column', height: '100vh', width: '100vw', background: 'var(--bg-color)' }}
+      style={{ display: 'flex', flexDirection: 'column', height: '100vh', width: '100vw', background: 'var(--bg-color)', position: 'relative' }}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
+      {/* ── Ambient Background Animated Mesh ── */}
+      <div className="ambient-mesh-container">
+        <div className="ambient-orb-1" />
+        <div className="ambient-orb-2" />
+      </div>
+
       {/* ── Minimal Subtle Toast ── */}
       <AnimatePresence>
         {dropToast && (
@@ -213,25 +241,23 @@ export default function App() {
         height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '0 20px', zIndex: 50, borderRadius: 'var(--radius-lg)',
       }}>
-        {/* Brand Logo */}
+        {/* Brand Logo with Official Icon */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{
-            width: 28, height: 28, borderRadius: 8, background: 'var(--accent)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--bg-color)',
-            fontWeight: 700, fontSize: 14, letterSpacing: '-0.03em',
-          }}>
-            A
-          </div>
+          <img 
+            src="./favicon.png" 
+            alt="MyOxia" 
+            style={{ width: 28, height: 28, borderRadius: 8, objectFit: 'contain', background: 'var(--accent-soft)', padding: 2 }} 
+          />
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ fontSize: 14, fontWeight: 600, letterSpacing: '-0.02em' }}>
-              Alpine Document
+            <span style={{ fontSize: 14, fontWeight: 700, letterSpacing: '-0.02em' }}>
+              MyOxia
             </span>
             <span style={{
               fontSize: 10, padding: '1px 6px', borderRadius: 6,
               background: 'var(--accent-soft)', color: 'var(--text-secondary)',
               fontWeight: 600, letterSpacing: '0.04em',
             }}>
-              LAB
+              PRO
             </span>
           </div>
         </div>
@@ -251,10 +277,10 @@ export default function App() {
               <motion.button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                whileTap={{ scale: 0.97 }}
+                whileTap={{ scale: 0.96 }}
                 style={{
                   position: 'relative',
-                  padding: '5px 14px',
+                  padding: '6px 14px',
                   fontSize: 13,
                   fontWeight: isSelected ? 600 : 500,
                   color: isSelected ? 'var(--text-primary)' : 'var(--text-secondary)',
@@ -284,19 +310,33 @@ export default function App() {
                   />
                 )}
                 <Icon size={14} />
-                {tab.label}
+                <span className="nav-tab-label">{tab.label}</span>
               </motion.button>
             );
           })}
         </div>
 
-        {/* Right Actions: Test Demo PDF + Theme Toggle */}
+        {/* Right Actions: PWA Install + Sample Guide + Theme Toggle */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {pwaPrompt && (
+            <motion.button
+              className="btn btn-primary"
+              onClick={handleInstallPWA}
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              whileHover={{ y: -1 }}
+              whileTap={{ scale: 0.96 }}
+              style={{ padding: '6px 12px', fontSize: 12, borderRadius: 'var(--radius-sm)', gap: 6 }}
+            >
+              <DownloadCloud size={13} /> Install App
+            </motion.button>
+          )}
+
           <motion.button
             className="btn btn-soft"
             onClick={() => handleOpenDemoDoc()}
             whileHover={{ y: -1 }}
-            whileTap={{ scale: 0.97 }}
+            whileTap={{ scale: 0.96 }}
             style={{
               padding: '6px 12px', fontSize: 12, borderRadius: 'var(--radius-sm)',
               fontWeight: 500, gap: 6,
@@ -332,15 +372,17 @@ export default function App() {
         paddingLeft: 20,
         paddingRight: 20,
         overflowY: 'auto',
+        position: 'relative',
+        zIndex: 2,
       }}>
         <AnimatePresence mode="wait">
           {activeTab === 'reader' ? (
             <motion.div
               key="reader-view"
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -12 }}
-              transition={{ type: 'spring', stiffness: 360, damping: 30 }}
+              initial={{ opacity: 0, y: 14, scale: 0.99 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -14, scale: 0.99 }}
+              transition={{ type: 'spring', stiffness: 360, damping: 28 }}
               style={{
                 display: 'flex', flexDirection: 'column', alignItems: 'center',
                 justifyContent: 'center', width: '100%', maxWidth: 540, marginTop: 'auto', marginBottom: 'auto',
@@ -350,6 +392,7 @@ export default function App() {
               {/* Drop Card */}
               <motion.div
                 whileHover={{ y: -2 }}
+                whileTap={{ scale: 0.995 }}
                 transition={{ type: 'spring', stiffness: 400, damping: 30 }}
                 className="glass-panel"
                 style={{
@@ -376,20 +419,20 @@ export default function App() {
                 />
                 
                 <motion.div 
-                  animate={{ scale: isDragging ? 1.08 : 1, y: isDragging ? -3 : 0 }}
-                  transition={{ type: 'spring', damping: 20 }}
+                  animate={{ scale: isDragging ? 1.12 : 1, y: isDragging ? -4 : 0 }}
+                  transition={{ type: 'spring', damping: 18 }}
                   style={{
-                    width: 54, height: 54, borderRadius: 16,
+                    width: 56, height: 56, borderRadius: 18,
                     background: 'var(--accent-soft)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     marginBottom: 16,
                   }}
                 >
-                  <UploadCloud size={26} color="var(--text-primary)" strokeWidth={1.75} />
+                  <UploadCloud size={26} color="var(--text-primary)" strokeWidth={1.8} />
                 </motion.div>
                 
-                <h2 style={{ fontSize: 18, fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>
-                  {isDragging ? 'Release to open document' : 'Open a document'}
+                <h2 style={{ fontSize: 19, fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>
+                  {isDragging ? 'Release to open document' : 'Open a PDF document'}
                 </h2>
                 <p style={{ marginTop: 6, color: 'var(--text-secondary)', fontSize: 13, textAlign: 'center', lineHeight: 1.5 }}>
                   Drop your PDF file here, or browse from your computer.
@@ -405,7 +448,7 @@ export default function App() {
                   }}
                   style={{
                     marginTop: 22,
-                    padding: '8px 16px',
+                    padding: '9px 18px',
                     borderRadius: 'var(--radius-md)',
                     background: 'var(--surface-card)',
                     border: '1px solid var(--glass-border)',
@@ -415,7 +458,7 @@ export default function App() {
                   }}
                 >
                   <Sparkles size={14} color="var(--text-primary)" />
-                  <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-primary)' }}>
+                  <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text-primary)' }}>
                     Explore Sample Guide Document
                   </span>
                   <ArrowRight size={13} color="var(--text-secondary)" />
@@ -480,10 +523,10 @@ export default function App() {
           ) : (
             <motion.div
               key="tools-view"
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -12 }}
-              transition={{ type: 'spring', stiffness: 360, damping: 30 }}
+              initial={{ opacity: 0, y: 14, scale: 0.99 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -14, scale: 0.99 }}
+              transition={{ type: 'spring', stiffness: 360, damping: 28 }}
               style={{ width: '100%', maxWidth: 1040, paddingBottom: 60 }}
             >
               <ToolsHub onSelectTool={handleSelectToolFromHub} />
