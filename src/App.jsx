@@ -2,7 +2,8 @@ import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   UploadCloud, File, Moon, Sun, Clock, Trash2,
-  Wand2, BookOpen, Sparkles, ArrowRight, ShieldCheck, DownloadCloud, Info
+  Wand2, BookOpen, Sparkles, ArrowRight, ShieldCheck, DownloadCloud,
+  Layers, PenTool, Files, LayoutGrid, CheckCircle2, ChevronRight, X
 } from 'lucide-react';
 import PDFViewer from './PDFViewer';
 import ToolsHub from './components/ToolsHub';
@@ -30,8 +31,20 @@ function formatBytes(bytes, decimals = 1) {
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
 }
 
+function formatRelativeTime(timestamp) {
+  if (!timestamp) return '';
+  const diff = Date.now() - timestamp;
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'Just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
+
 export default function App() {
-  const [activeTab, setActiveTab] = useState('reader'); // 'reader' | 'tools'
+  const [activeTab, setActiveTab] = useState('reader'); // 'reader' | 'tools' | 'about'
   const [activeTool, setActiveTool] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
   const [file, setFile] = useState(null);
@@ -132,6 +145,15 @@ export default function App() {
     localStorage.removeItem('alpine_recent_files');
   };
 
+  const removeSingleRecentFile = (e, fileId) => {
+    e.stopPropagation();
+    setRecentFiles(prev => {
+      const filtered = prev.filter(f => f.id !== fileId);
+      localStorage.setItem('alpine_recent_files', JSON.stringify(filtered));
+      return filtered;
+    });
+  };
+
   const handleDragOver = (e) => {
     e.preventDefault();
     if (!file) setIsDragging(true);
@@ -207,7 +229,7 @@ export default function App() {
             initial={{ opacity: 0, y: -16, scale: 0.96 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -16, scale: 0.96 }}
-            transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+            transition={{ type: 'spring', stiffness: 450, damping: 32 }}
             style={{
               position: 'fixed', top: 20, left: '50%', transform: 'translateX(-50%)',
               zIndex: 999, background: 'var(--accent)', color: 'var(--bg-color)',
@@ -245,37 +267,45 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      {/* ── Top Navbar (Zero Overflow Responsive Design) ── */}
+      {/* ── Top Floating Navigation Dock (Zero Overflow Responsive Design) ── */}
       <nav className="glass-panel" style={{ 
         position: 'fixed', top: 14, left: 16, right: 16, 
         height: 52, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '0 14px', zIndex: 50, borderRadius: 'var(--radius-lg)',
       }}>
-        {/* Brand Logo & Series Badge */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-          <img 
-            src="./favicon.png" 
-            alt="MyOx" 
-            style={{ width: 26, height: 26, borderRadius: 7, objectFit: 'contain', background: 'var(--accent-soft)', padding: 2 }} 
-          />
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 5 }}>
-            <span style={{ fontSize: 15, fontWeight: 800, letterSpacing: '-0.03em', color: 'var(--text-primary)' }}>
+        {/* Brand Identity & Ecosystem Badge */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 9, flexShrink: 0 }}>
+          <div style={{
+            width: 28, height: 28, borderRadius: 8,
+            background: 'var(--accent-soft)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: 2,
+            border: '1px solid var(--glass-border)',
+          }}>
+            <img 
+              src="./favicon.png" 
+              alt="MyOx" 
+              style={{ width: '100%', height: '100%', objectFit: 'contain' }} 
+            />
+          </div>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+            <span style={{ fontSize: 15.5, fontWeight: 800, letterSpacing: '-0.035em', color: 'var(--text-primary)' }}>
               MyOx
             </span>
             <span className="desktop-only" style={{
-              fontSize: 9, padding: '1px 5px', borderRadius: 5,
+              fontSize: 9.5, padding: '2px 6px', borderRadius: 6,
               background: 'var(--accent-soft)', color: 'var(--text-secondary)',
-              fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase',
+              fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase',
             }}>
               Alpine Foundations
             </span>
           </div>
         </div>
 
-        {/* Center Segmented Control with Gliding Pill Indicator */}
+        {/* Center Segmented Gliding Pill Navigation */}
         <div style={{
           display: 'flex', alignItems: 'center', background: 'var(--bg-subtle)',
-          borderRadius: 'var(--radius-md)', padding: 2, gap: 2, position: 'relative',
+          borderRadius: 'var(--radius-md)', padding: 3, gap: 2, position: 'relative',
         }}>
           {[
             { id: 'reader', label: 'Viewer', fullLabel: 'Document Viewer', icon: BookOpen },
@@ -291,7 +321,7 @@ export default function App() {
                 whileTap={{ scale: 0.96 }}
                 style={{
                   position: 'relative',
-                  padding: '5px 12px',
+                  padding: '5px 13px',
                   fontSize: 12.5,
                   fontWeight: isSelected ? 700 : 500,
                   color: isSelected ? 'var(--text-primary)' : 'var(--text-secondary)',
@@ -309,7 +339,7 @@ export default function App() {
                 {isSelected && (
                   <motion.div
                     layoutId="active-tab-pill"
-                    transition={{ type: 'spring', stiffness: 420, damping: 32 }}
+                    transition={{ type: 'spring', stiffness: 450, damping: 32 }}
                     style={{
                       position: 'absolute',
                       inset: 0,
@@ -350,7 +380,7 @@ export default function App() {
             whileHover={{ y: -1 }}
             whileTap={{ scale: 0.96 }}
             style={{
-              padding: '5px 10px', fontSize: 12, borderRadius: 'var(--radius-sm)',
+              padding: '5px 11px', fontSize: 12, borderRadius: 'var(--radius-sm)',
               fontWeight: 600, gap: 5,
             }}
           >
@@ -376,7 +406,7 @@ export default function App() {
         </div>
       </nav>
 
-      {/* Main Content Area with Fluid Section Flipping */}
+      {/* ── Main Content Area with Fluid Section Transitions ── */}
       <main style={{
         display: 'flex',
         flex: 1,
@@ -402,11 +432,11 @@ export default function App() {
               transition={{ type: 'spring', stiffness: 360, damping: 28 }}
               style={{
                 display: 'flex', flexDirection: 'column', alignItems: 'center',
-                justifyContent: 'center', width: '100%', maxWidth: 520, marginTop: 'auto', marginBottom: 'auto',
+                justifyContent: 'center', width: '100%', maxWidth: 540, marginTop: 'auto', marginBottom: 'auto',
                 paddingBottom: 32,
               }}
             >
-              {/* Drop Card */}
+              {/* ── Elevated Focal Dropzone ── */}
               <motion.div
                 whileHover={{ y: -2 }}
                 whileTap={{ scale: 0.995 }}
@@ -424,7 +454,9 @@ export default function App() {
                   cursor: 'pointer',
                   borderRadius: 'var(--radius-xl)',
                   transition: 'border-color 0.2s ease, background-color 0.2s ease',
-                  boxShadow: 'var(--shadow-lg)',
+                  boxShadow: isDragging ? '0 0 0 4px var(--accent-soft), var(--shadow-xl)' : 'var(--shadow-lg)',
+                  position: 'relative',
+                  overflow: 'hidden',
                 }}
                 onClick={() => fileInputRef.current?.click()}
               >
@@ -436,54 +468,71 @@ export default function App() {
                   onChange={handleFileSelect}
                 />
                 
+                {/* Glowing Concentric Upload Core */}
                 <motion.div 
-                  animate={{ scale: isDragging ? 1.12 : 1, y: isDragging ? -4 : 0 }}
+                  animate={{ scale: isDragging ? 1.15 : 1, y: isDragging ? -4 : 0 }}
                   transition={{ type: 'spring', damping: 18 }}
                   style={{
-                    width: 54, height: 54, borderRadius: 16,
+                    width: 58, height: 58, borderRadius: 18,
                     background: 'var(--accent-soft)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    marginBottom: 14,
-                  }}
-                >
-                  <UploadCloud size={26} color="var(--text-primary)" strokeWidth={1.8} />
-                </motion.div>
-                
-                <h2 style={{ fontSize: 18, fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--text-primary)', textAlign: 'center' }}>
-                  {isDragging ? 'Release to open document' : 'Open a PDF document'}
-                </h2>
-                <p style={{ marginTop: 6, color: 'var(--text-secondary)', fontSize: 12.5, textAlign: 'center', lineHeight: 1.5, maxWidth: 360 }}>
-                  Drop your PDF file here, or browse from your computer.
-                </p>
-
-                {/* 1-Click Interactive Demo Button */}
-                <motion.div
-                  whileHover={{ scale: 1.02, y: -1 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleOpenDemoDoc();
-                  }}
-                  style={{
-                    marginTop: 20,
-                    padding: '8px 16px',
-                    borderRadius: 'var(--radius-md)',
-                    background: 'var(--surface-card)',
+                    marginBottom: 16,
                     border: '1px solid var(--glass-border)',
                     boxShadow: 'var(--shadow-sm)',
-                    display: 'flex', alignItems: 'center', gap: 7,
-                    cursor: 'pointer',
                   }}
                 >
-                  <Sparkles size={13} color="var(--text-primary)" />
-                  <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>
-                    Explore Sample Guide Document
-                  </span>
-                  <ArrowRight size={12} color="var(--text-secondary)" />
+                  <UploadCloud size={28} color="var(--text-primary)" strokeWidth={1.8} />
                 </motion.div>
                 
+                <h2 style={{ fontSize: 18.5, fontWeight: 700, letterSpacing: '-0.025em', color: 'var(--text-primary)', textAlign: 'center' }}>
+                  {isDragging ? 'Release to open document' : 'Open a PDF document'}
+                </h2>
+                <p style={{ marginTop: 6, color: 'var(--text-secondary)', fontSize: 13, textAlign: 'center', lineHeight: 1.5, maxWidth: 380 }}>
+                  Drag & drop your PDF file here, or click to browse from your device.
+                </p>
+
+                {/* Quick Interactive Tool Launchers inside Drop Area */}
+                <div style={{
+                  display: 'flex', flexWrap: 'wrap', gap: 6, justifyContent: 'center',
+                  marginTop: 20, maxWidth: 440,
+                }}>
+                  {[
+                    { label: 'Sample Guide', icon: Sparkles, action: () => handleOpenDemoDoc() },
+                    { label: 'Sign PDF', icon: PenTool, action: () => handleOpenDemoDoc('signature') },
+                    { label: 'Merge Files', icon: Files, action: () => setActiveTool('merge') },
+                    { label: 'Organize Pages', icon: LayoutGrid, action: () => setActiveTool('organize') },
+                  ].map((chip, idx) => {
+                    const ChipIcon = chip.icon;
+                    return (
+                      <motion.div
+                        key={idx}
+                        whileHover={{ scale: 1.03, y: -1 }}
+                        whileTap={{ scale: 0.97 }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          chip.action();
+                        }}
+                        style={{
+                          padding: '6px 12px',
+                          borderRadius: 'var(--radius-sm)',
+                          background: 'var(--surface-card)',
+                          border: '1px solid var(--glass-border)',
+                          boxShadow: 'var(--shadow-xs)',
+                          display: 'flex', alignItems: 'center', gap: 6,
+                          fontSize: 11.5, fontWeight: 600, color: 'var(--text-primary)',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <ChipIcon size={12} color="var(--text-secondary)" />
+                        <span>{chip.label}</span>
+                      </motion.div>
+                    );
+                  })}
+                </div>
+                
+                {/* Security Trust Anchor */}
                 <div style={{ marginTop: 22, display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--text-tertiary)', textAlign: 'center' }}>
-                  <ShieldCheck size={12} /> Client-Side Privacy • In-Memory Processing by Alpine Foundations
+                  <ShieldCheck size={13} color="var(--accent-emerald)" /> Client-Side Privacy • In-Memory Processing by Alpine Foundations
                 </div>
               </motion.div>
 
@@ -500,20 +549,20 @@ export default function App() {
                       style={{ fontSize: 11, padding: '2px 6px', color: 'var(--text-tertiary)', gap: 4 }}
                       title="Clear recent history"
                     >
-                      <Trash2 size={11} /> Clear
+                      <Trash2 size={11} /> Clear all
                     </button>
                   </div>
 
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                     {recentFiles.map(rf => (
                       <motion.div
                         key={rf.id}
                         whileHover={{ y: -1 }}
-                        whileTap={{ scale: 0.99 }}
+                        whileTap={{ scale: 0.995 }}
                         onClick={() => fileInputRef.current?.click()}
                         className="glass-panel"
                         style={{
-                          padding: '9px 12px',
+                          padding: '10px 14px',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'space-between',
@@ -523,15 +572,36 @@ export default function App() {
                           boxShadow: 'var(--shadow-sm)',
                         }}
                       >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, overflow: 'hidden' }}>
-                          <File size={14} color="var(--text-secondary)" />
-                          <span style={{ fontSize: 12.5, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {rf.name}
-                          </span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 9, overflow: 'hidden' }}>
+                          <div style={{
+                            width: 28, height: 28, borderRadius: 6,
+                            background: 'var(--accent-soft)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            flexShrink: 0,
+                          }}>
+                            <File size={14} color="var(--text-secondary)" />
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                            <span style={{ fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {rf.name}
+                            </span>
+                            <span style={{ fontSize: 10.5, color: 'var(--text-tertiary)' }}>
+                              {formatRelativeTime(rf.lastOpened)} • {formatBytes(rf.size)}
+                            </span>
+                          </div>
                         </div>
-                        <span style={{ fontSize: 10.5, color: 'var(--text-tertiary)', whiteSpace: 'nowrap', marginLeft: 10 }}>
-                          {formatBytes(rf.size)}
-                        </span>
+                        
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                          <button
+                            className="btn"
+                            onClick={(e) => removeSingleRecentFile(e, rf.id)}
+                            style={{ padding: 4, color: 'var(--text-tertiary)' }}
+                            title="Remove from recents"
+                          >
+                            <X size={13} />
+                          </button>
+                          <ChevronRight size={14} color="var(--text-tertiary)" />
+                        </div>
                       </motion.div>
                     ))}
                   </div>

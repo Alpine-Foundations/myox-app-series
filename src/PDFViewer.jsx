@@ -2072,6 +2072,65 @@ export default function PDFViewer({
         </main>
       </div>
 
+      {/* ── Desktop Floating Reading HUD ── */}
+      {!isMobile && numPages > 1 && (
+        <motion.div
+          initial={{ y: 24, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ type: 'spring', stiffness: 380, damping: 28 }}
+          className="glass-panel"
+          style={{
+            position: 'fixed',
+            bottom: 22,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            height: 42,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 7,
+            padding: '0 12px',
+            zIndex: 120,
+            borderRadius: 'var(--radius-full)',
+            boxShadow: 'var(--shadow-lg)',
+            background: 'var(--surface-overlay)',
+          }}
+        >
+          <motion.button whileTap={{ scale: 0.9 }} className="btn" onClick={() => scrollToPage(currentPage - 1)} style={{ padding: 4 }} title="Previous Page (PgUp)">
+            <ChevronUp size={15} color="var(--text-secondary)" />
+          </motion.button>
+          <span style={{ fontSize: 12, fontWeight: 700, minWidth: 64, textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>
+            {currentPage} / {numPages}
+          </span>
+          <motion.button whileTap={{ scale: 0.9 }} className="btn" onClick={() => scrollToPage(currentPage + 1)} style={{ padding: 4 }} title="Next Page (PgDn)">
+            <ChevronDown size={15} color="var(--text-secondary)" />
+          </motion.button>
+
+          <div style={{ width: 1, height: 16, background: 'var(--glass-border)' }} />
+
+          <motion.button whileTap={{ scale: 0.9 }} className="btn" onClick={zoomOut} style={{ padding: 4 }} title="Zoom Out (-)">
+            <ZoomOut size={14} color="var(--text-secondary)" />
+          </motion.button>
+          <span style={{ fontSize: 11.5, minWidth: 36, textAlign: 'center', fontVariantNumeric: 'tabular-nums', color: 'var(--text-secondary)', fontWeight: 600 }}>
+            {Math.round(scale * 100)}%
+          </span>
+          <motion.button whileTap={{ scale: 0.9 }} className="btn" onClick={zoomIn} style={{ padding: 4 }} title="Zoom In (+)">
+            <ZoomIn size={14} color="var(--text-secondary)" />
+          </motion.button>
+
+          <div style={{ width: 1, height: 16, background: 'var(--glass-border)' }} />
+
+          <motion.button
+            whileTap={{ scale: 0.9 }}
+            className="btn btn-soft"
+            onClick={fitToWidth}
+            title="Fit to Width"
+            style={{ padding: '3px 9px', fontSize: 11.5, borderRadius: 'var(--radius-sm)', fontWeight: 600 }}
+          >
+            Fit Width
+          </motion.button>
+        </motion.div>
+      )}
+
       {/* ── Mobile Floating Bottom Action Bar ── */}
       {isMobile && (
         <motion.div
@@ -2100,7 +2159,7 @@ export default function PDFViewer({
             <motion.button whileTap={{ scale: 0.9 }} className="btn" onClick={() => scrollToPage(currentPage - 1)} style={{ padding: 6 }}>
               <ChevronUp size={16} color="var(--text-secondary)" />
             </motion.button>
-            <span style={{ fontSize: 12, fontWeight: 600, minWidth: 44, textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>
+            <span style={{ fontSize: 12, fontWeight: 700, minWidth: 44, textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>
               {currentPage}/{numPages || 1}
             </span>
             <motion.button whileTap={{ scale: 0.9 }} className="btn" onClick={() => scrollToPage(currentPage + 1)} style={{ padding: 6 }}>

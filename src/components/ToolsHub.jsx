@@ -181,7 +181,7 @@ export default function ToolsHub({ onSelectTool }) {
   }).filter(Boolean);
 
   const categoryPills = [
-    { id: 'all', label: 'All Tools' },
+    { id: 'all', label: 'All Utilities' },
     ...TOOLS_CATEGORIES.map(c => ({ id: c.id, label: c.title.split(' ')[0] })),
   ];
 
@@ -193,37 +193,37 @@ export default function ToolsHub({ onSelectTool }) {
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ type: 'spring', stiffness: 350, damping: 28 }}
-        style={{ textAlign: 'center', marginBottom: 24 }}
+        style={{ textAlign: 'center', marginBottom: 26 }}
       >
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '3px 10px', borderRadius: 99, background: 'var(--accent-soft)', marginBottom: 10 }}>
-          <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
-            Alpine Foundations Enterprise Suite
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '3px 12px', borderRadius: 99, background: 'var(--accent-soft)', marginBottom: 12 }}>
+          <span style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.06em', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
+            Alpine Foundations • MyOx Studio
           </span>
         </div>
-        <h2 style={{ fontSize: 26, fontWeight: 800, letterSpacing: '-0.03em', color: 'var(--text-primary)' }}>
-          MyOx PDF Studio Utilities
+        <h2 style={{ fontSize: 28, fontWeight: 800, letterSpacing: '-0.035em', color: 'var(--text-primary)' }}>
+          PDF Power Utilities
         </h2>
-        <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 4, maxWidth: 460, margin: '4px auto 0', lineHeight: 1.5 }}>
-          Client-side GPU accelerated tools running 100% in local memory.
+        <p style={{ fontSize: 13.5, color: 'var(--text-secondary)', marginTop: 6, maxWidth: 480, margin: '6px auto 0', lineHeight: 1.5 }}>
+          High-performance, in-memory PDF tools engineered for zero latency and client-side privacy.
         </p>
 
-        {/* ── Search Bar & Horizontal Swipeable Filter Tabs ── */}
-        <div style={{ marginTop: 18, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
-          <div style={{ position: 'relative', width: '100%', maxWidth: 380 }}>
-            <Search size={14} color="var(--text-tertiary)" style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)' }} />
+        {/* ── Search Bar & Filter Tabs ── */}
+        <div style={{ marginTop: 20, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+          <div style={{ position: 'relative', width: '100%', maxWidth: 400 }}>
+            <Search size={15} color="var(--text-tertiary)" style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)' }} />
             <input
               type="text"
-              placeholder="Search utilities (Merge, E-Sign, Split)…"
+              placeholder="Search utilities (Merge, E-Sign, Split, Compress)…"
               value={search}
               onChange={e => setSearch(e.target.value)}
               style={{
                 width: '100%',
-                padding: '8px 14px 8px 36px',
+                padding: '9px 14px 9px 38px',
                 borderRadius: 'var(--radius-md)',
                 background: 'var(--surface-card)',
                 border: '1px solid var(--glass-border)',
                 color: 'var(--text-primary)',
-                fontSize: 12.5,
+                fontSize: 13,
                 outline: 'none',
                 boxShadow: 'var(--shadow-sm)',
               }}
@@ -234,12 +234,12 @@ export default function ToolsHub({ onSelectTool }) {
                 onClick={() => setSearch('')}
                 style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', padding: 3 }}
               >
-                <X size={12} color="var(--text-secondary)" />
+                <X size={13} color="var(--text-secondary)" />
               </button>
             )}
           </div>
 
-          {/* Swipeable Category Tabs (No Wrapping Overflow on Mobile) */}
+          {/* Swipeable Category Tabs */}
           <div 
             className="no-scrollbar"
             style={{
@@ -262,8 +262,8 @@ export default function ToolsHub({ onSelectTool }) {
                   whileTap={{ scale: 0.96 }}
                   style={{
                     position: 'relative',
-                    padding: '5px 12px',
-                    fontSize: 12,
+                    padding: '6px 14px',
+                    fontSize: 12.5,
                     fontWeight: isSelected ? 700 : 500,
                     color: isSelected ? 'var(--text-primary)' : 'var(--text-secondary)',
                     borderRadius: 'var(--radius-sm)',
@@ -279,7 +279,7 @@ export default function ToolsHub({ onSelectTool }) {
                   {isSelected && (
                     <motion.div
                       layoutId="active-hub-pill"
-                      transition={{ type: 'spring', stiffness: 420, damping: 32 }}
+                      transition={{ type: 'spring', stiffness: 450, damping: 32 }}
                       style={{
                         position: 'absolute',
                         inset: 0,
@@ -299,14 +299,14 @@ export default function ToolsHub({ onSelectTool }) {
       </motion.div>
 
       {/* ── Tools Grid with Fluid Responsive Columns ── */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 30 }}>
         {filteredCategories.map(category => (
           <div key={category.id}>
-            <div style={{ marginBottom: 10 }}>
-              <h3 style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
+            <div style={{ marginBottom: 12, paddingLeft: 2 }}>
+              <h3 style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.025em' }}>
                 {category.title}
               </h3>
-              <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 1 }}>
+              <p style={{ fontSize: 12.5, color: 'var(--text-secondary)', marginTop: 2 }}>
                 {category.description}
               </p>
             </div>
@@ -318,7 +318,7 @@ export default function ToolsHub({ onSelectTool }) {
               style={{
                 display: 'grid',
                 gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 280px), 1fr))',
-                gap: 12,
+                gap: 14,
               }}
             >
               {category.tools.map(tool => {
@@ -332,7 +332,7 @@ export default function ToolsHub({ onSelectTool }) {
                     onClick={() => onSelectTool(tool.id)}
                     className="glass-panel"
                     style={{
-                      padding: '16px',
+                      padding: '18px',
                       cursor: 'pointer',
                       display: 'flex',
                       flexDirection: 'column',
@@ -345,18 +345,18 @@ export default function ToolsHub({ onSelectTool }) {
                     }}
                   >
                     <div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                         <div style={{
-                          width: 36, height: 36, borderRadius: 10,
+                          width: 38, height: 38, borderRadius: 10,
                           background: 'var(--accent-soft)',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                           color: 'var(--text-primary)',
                         }}>
-                          <IconComponent size={18} strokeWidth={1.75} />
+                          <IconComponent size={19} strokeWidth={1.8} />
                         </div>
                         <span style={{
-                          fontSize: 10, fontWeight: 700,
-                          padding: '2px 7px', borderRadius: 5,
+                          fontSize: 10.5, fontWeight: 700,
+                          padding: '2px 8px', borderRadius: 6,
                           background: 'var(--bg-subtle)',
                           color: 'var(--text-secondary)',
                           letterSpacing: '0.02em',
@@ -365,21 +365,21 @@ export default function ToolsHub({ onSelectTool }) {
                         </span>
                       </div>
 
-                      <h4 style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 4, letterSpacing: '-0.01em' }}>
+                      <h4 style={{ fontSize: 14.5, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 5, letterSpacing: '-0.015em' }}>
                         {tool.name}
                       </h4>
-                      <p style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.45 }}>
+                      <p style={{ fontSize: 12.5, color: 'var(--text-secondary)', lineHeight: 1.45 }}>
                         {tool.desc}
                       </p>
                     </div>
 
                     <div style={{
-                      marginTop: 12, paddingTop: 10, borderTop: '1px solid var(--glass-border)',
+                      marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--glass-border)',
                       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                      fontSize: 12, fontWeight: 600, color: 'var(--text-primary)',
+                      fontSize: 12.5, fontWeight: 600, color: 'var(--text-primary)',
                     }}>
                       <span>Launch Tool</span>
-                      <ArrowRight size={12} color="var(--text-tertiary)" />
+                      <ArrowRight size={13} color="var(--text-tertiary)" />
                     </div>
                   </motion.div>
                 );
