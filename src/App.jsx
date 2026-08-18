@@ -2,10 +2,11 @@ import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   UploadCloud, File, Moon, Sun, Clock, Trash2,
-  Wand2, BookOpen, Sparkles, ArrowRight, ShieldCheck, DownloadCloud
+  Wand2, BookOpen, Sparkles, ArrowRight, ShieldCheck, DownloadCloud, Info
 } from 'lucide-react';
 import PDFViewer from './PDFViewer';
 import ToolsHub from './components/ToolsHub';
+import DeveloperPage from './components/DeveloperPage';
 import MergePDFTool from './components/tools/MergePDFTool';
 import SplitPDFTool from './components/tools/SplitPDFTool';
 import PageOrganizerModal from './components/tools/PageOrganizerModal';
@@ -279,6 +280,7 @@ export default function App() {
           {[
             { id: 'reader', label: 'Viewer', fullLabel: 'Document Viewer', icon: BookOpen },
             { id: 'tools', label: 'Utilities', fullLabel: 'PDF Utilities', icon: Wand2 },
+            { id: 'about', label: 'About', fullLabel: 'About MyOx', icon: Sparkles },
           ].map(tab => {
             const Icon = tab.icon;
             const isSelected = activeTab === tab.id;
@@ -391,7 +393,7 @@ export default function App() {
         maxWidth: '100vw',
       }}>
         <AnimatePresence mode="wait">
-          {activeTab === 'reader' ? (
+          {activeTab === 'reader' && (
             <motion.div
               key="reader-view"
               initial={{ opacity: 0, y: 12, scale: 0.99 }}
@@ -536,7 +538,9 @@ export default function App() {
                 </div>
               )}
             </motion.div>
-          ) : (
+          )}
+
+          {activeTab === 'tools' && (
             <motion.div
               key="tools-view"
               initial={{ opacity: 0, y: 12, scale: 0.99 }}
@@ -546,6 +550,22 @@ export default function App() {
               style={{ width: '100%', maxWidth: 1040, paddingBottom: 60 }}
             >
               <ToolsHub onSelectTool={handleSelectToolFromHub} />
+            </motion.div>
+          )}
+
+          {activeTab === 'about' && (
+            <motion.div
+              key="about-view"
+              initial={{ opacity: 0, y: 12, scale: 0.99 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -12, scale: 0.99 }}
+              transition={{ type: 'spring', stiffness: 360, damping: 28 }}
+              style={{ width: '100%', maxWidth: 920, paddingBottom: 60 }}
+            >
+              <DeveloperPage
+                onBackToViewer={() => setActiveTab('reader')}
+                onOpenUtilities={() => setActiveTab('tools')}
+              />
             </motion.div>
           )}
         </AnimatePresence>

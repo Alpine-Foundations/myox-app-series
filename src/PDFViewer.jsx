@@ -139,7 +139,6 @@ const VirtualPage = memo(function VirtualPage({
   scale,
   rotation,
   pageWidth,
-  readingShader = 'paper',
   searchQuery,
   activeMatch,
   placedSignatures,
@@ -207,7 +206,6 @@ const VirtualPage = memo(function VirtualPage({
       {inRange ? (
         <>
           <div
-            className={`pdf-shader-${readingShader}`}
             style={{
               boxShadow: '0 2px 24px rgba(0,0,0,0.10)',
               borderRadius: 4,
@@ -353,10 +351,6 @@ export default function PDFViewer({
   const [selectedText,   setSelectedText]  = useState('');
   const [copiedToast,    setCopiedToast]   = useState(false);
 
-  // Document Reading Shader (Independent of App UI Theme)
-  const [readingShader,    setReadingShader]    = useState('paper'); // 'paper' | 'inverted' | 'sepia' | 'mint' | 'slate'
-  const [showReadingMenu,  setShowReadingMenu]  = useState(false);
-
   const [isDarkMode,     setIsDarkMode]    = useState(() => theme === 'dark');
   const [isFullscreen,   setIsFullscreen]  = useState(false);
   const [hasOutline,     setHasOutline]    = useState(null);
@@ -498,29 +492,28 @@ export default function PDFViewer({
     return () => ro.disconnect();
   }, []);
 
-  // Click-outside: dismiss open dropdown menus (Tools & Reading Shader)
+  // Click-outside: dismiss open tools menu
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (toolsMenuRef.current && !toolsMenuRef.current.contains(e.target)) {
         setShowToolsMenu(false);
-      }
-      if (readingMenuRef.current && !readingMenuRef.current.contains(e.target)) {
-        setShowReadingMenu(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Compute responsive page width based on zoom & two-page spread
+  // Compute responsive page width based on zoom & two-page spread (Desktop only)
+  const isEffectiveTwoPage = viewMode === 'two-page' && !isMobile;
+
   const pageWidth = useMemo(() => {
     if (!containerWidth) return 600;
-    const padding = 48;
-    const baseW = viewMode === 'two-page'
+    const padding = isMobile ? 12 : 48;
+    const baseW = isEffectiveTwoPage
       ? Math.max(280, (containerWidth - padding * 2 - 20) / 2)
-      : Math.max(320, containerWidth - padding * 2);
+      : Math.max(280, containerWidth - padding * 2);
     return Math.round(baseW * scale);
-  }, [containerWidth, scale, viewMode]);
+  }, [containerWidth, scale, isEffectiveTwoPage, isMobile]);
 
   // Document load callbacks
   const onDocumentLoad = useCallback((pdf) => {
@@ -1012,11 +1005,11 @@ export default function PDFViewer({
   const renderMin = Math.max(1, renderCenter - RENDER_BUFFER);
   const renderMax = numPages ? Math.min(numPages, renderCenter + RENDER_BUFFER) : 1;
 
-  // Build page rows for two-page spread or single-page layout
+  // Build page rows for two-page spread (Desktop only) or single-page layout
   const pageRows = useMemo(() => {
     if (!numPages) return [];
     const rows = [];
-    if (viewMode === 'two-page') {
+    if (isEffectiveTwoPage) {
       rows.push([1]);
       for (let i = 2; i <= numPages; i += 2) {
         if (i + 1 <= numPages) {
@@ -1031,7 +1024,7 @@ export default function PDFViewer({
       }
     }
     return rows;
-  }, [numPages, viewMode]);
+  }, [numPages, isEffectiveTwoPage]);
 
   const pageNums = useMemo(() => {
     if (!numPages) return [];
@@ -1783,66 +1776,6 @@ export default function PDFViewer({
                 <RotateCw size={14} color="var(--text-secondary)" />
               </motion.button>
 
-              {/* Reading Paper Shader Switcher */}
-              <div style={{ position: 'relative' }}>
-                <motion.button
-                  whileTap={{ scale: 0.92 }}
-                  className="btn"
-                  onClick={() => setShowReadingMenu(v => !v)}
-                  title="Page Reading Tone (Eye-Care Sepia, Mint, Night)"
-                  style={{
-                    padding: 5,
-                    background: readingShader !== 'paper' ? 'var(--accent-soft)' : 'transparent',
-                    borderRadius: 'var(--radius-sm)',
-                  }}
-                >
-                  <Eye size={14} color="var(--text-secondary)" />
-                </motion.button>
-
-                <AnimatePresence>
-                  {showReadingMenu && (
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.96, y: 6 }}
-                      animate={{ opacity: 1, scale: 1, y: 0 }}
-                      exit={{ opacity: 0, scale: 0.96, y: 6 }}
-                      transition={{ type: 'spring', stiffness: 400, damping: 28 }}
-                      className="glass-panel"
-                      style={{
-                        position: 'absolute', right: -10, top: 36, width: 190,
-                        borderRadius: 'var(--radius-md)', padding: 5, zIndex: 200,
-                        background: 'var(--surface-card)', border: '1px solid var(--glass-border)',
-                        boxShadow: 'var(--shadow-lg)',
-                        display: 'flex', flexDirection: 'column', gap: 2,
-                      }}
-                    >
-                      <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-tertiary)', padding: '4px 8px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                        Paper Shader:
-                      </span>
-                      {[
-                        { id: 'paper', label: '☀️ Natural Paper' },
-                        { id: 'sepia', label: '📖 Warm Sepia' },
-                        { id: 'mint', label: '🌿 Soft Mint Tone' },
-                        { id: 'slate', label: '🌫️ Cool Slate' },
-                        { id: 'inverted', label: '🌙 Night Inverted' },
-                      ].map(s => (
-                        <button
-                          key={s.id}
-                          className="btn"
-                          onClick={() => { setReadingShader(s.id); setShowReadingMenu(false); }}
-                          style={{
-                            justifyContent: 'flex-start', padding: '5px 8px', fontSize: 12, borderRadius: 'var(--radius-xs)',
-                            background: readingShader === s.id ? 'var(--accent-soft)' : 'transparent',
-                            fontWeight: readingShader === s.id ? 600 : 400,
-                          }}
-                        >
-                          {s.label}
-                        </button>
-                      ))}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-
               {/* Theme */}
               <motion.button whileTap={{ scale: 0.9 }} className="btn" onClick={handleToggleDarkMode} title="Toggle App Theme" style={{ padding: 4 }}>
                 {isDarkMode ? <Sun size={14} color="var(--text-secondary)" /> : <Moon size={14} color="var(--text-secondary)" />}
@@ -2114,7 +2047,6 @@ export default function PDFViewer({
                       scale={scale}
                       rotation={rotation}
                       pageWidth={pageWidth}
-                      readingShader={readingShader}
                       searchQuery={searchQuery}
                       activeMatch={activeMatch}
                       placedSignatures={placedSignatures}
@@ -2281,63 +2213,19 @@ export default function PDFViewer({
               {/* Content List */}
               <div style={{ padding: '14px 16px', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: 14 }}>
                 
-                {/* Display & View Controls */}
+                {/* Display & Orientation Controls */}
                 <div>
                   <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 6 }}>
-                    Display & Orientation
+                    Orientation & Viewing
                   </span>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 8 }}>
                     <button
                       className="btn glass-panel"
                       onClick={() => { rotate(); }}
-                      style={{ padding: '8px 10px', fontSize: 12, justifyContent: 'flex-start', gap: 8, background: 'var(--surface-card)' }}
+                      style={{ padding: '9px 12px', fontSize: 12.5, justifyContent: 'flex-start', gap: 8, background: 'var(--surface-card)', width: '100%' }}
                     >
-                      <RotateCw size={14} color="var(--text-secondary)" /> Rotate 90°
+                      <RotateCw size={14} color="var(--text-secondary)" /> Rotate Document 90° Clockwise
                     </button>
-
-                    <button
-                      className="btn glass-panel"
-                      onClick={() => { setViewMode(v => v === 'single' ? 'two-page' : 'single'); }}
-                      style={{
-                        padding: '8px 10px', fontSize: 12, justifyContent: 'flex-start', gap: 8,
-                        background: viewMode === 'two-page' ? 'var(--accent-soft)' : 'var(--surface-card)',
-                        color: 'var(--text-primary)',
-                      }}
-                    >
-                      <BookOpen size={14} /> {viewMode === 'two-page' ? 'Single Page' : 'Two-Page'}
-                    </button>
-                  </div>
-                </div>
-
-                {/* Paper Reading Shaders */}
-                <div>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 6 }}>
-                    Reading Tone Shaders
-                  </span>
-                  <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 4 }} className="no-scrollbar">
-                    {[
-                      { id: 'paper', label: '☀️ Paper' },
-                      { id: 'sepia', label: '📖 Sepia' },
-                      { id: 'mint', label: '🌿 Mint' },
-                      { id: 'slate', label: '🌫️ Slate' },
-                      { id: 'inverted', label: '🌙 OLED' },
-                    ].map(s => (
-                      <button
-                        key={s.id}
-                        className="btn"
-                        onClick={() => setReadingShader(s.id)}
-                        style={{
-                          padding: '6px 10px', fontSize: 11.5, borderRadius: 'var(--radius-sm)',
-                          background: readingShader === s.id ? 'var(--accent)' : 'var(--surface-card)',
-                          color: readingShader === s.id ? 'var(--bg-color)' : 'var(--text-primary)',
-                          border: '1px solid var(--glass-border)',
-                          whiteSpace: 'nowrap',
-                          flexShrink: 0,
-                        }}
-                      >
-                        {s.label}
-                      </button>
-                    ))}
                   </div>
                 </div>
 
