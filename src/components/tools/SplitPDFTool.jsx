@@ -103,50 +103,37 @@ export default function SplitPDFTool({ initialFile, onClose }) {
   };
 
   return (
-    <div style={{
-      position: 'fixed', inset: 0, zIndex: 200,
-      background: 'rgba(0, 0, 0, 0.65)', backdropFilter: 'blur(16px)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
-    }}>
+    <div className="modal-overlay">
       <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 15 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95 }}
-        className="glass-panel"
-        style={{
-          width: '100%', maxWidth: 840, maxHeight: '90vh',
-          display: 'flex', flexDirection: 'column',
-          background: 'var(--bg-color)', borderRadius: 20,
-          border: '1px solid var(--glass-border)', boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
-          overflow: 'hidden',
-        }}
+        className="modal-card glass-panel"
+        style={{ maxWidth: 840 }}
       >
         {/* Header */}
-        <div style={{
-          padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          borderBottom: '1px solid var(--glass-border)',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(255, 59, 48, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ff3b30' }}>
-              <Scissors size={20} />
+        <div className="modal-header">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, overflow: 'hidden' }}>
+            <div style={{ width: 34, height: 34, borderRadius: 10, background: 'rgba(255, 59, 48, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ff3b30', flexShrink: 0 }}>
+              <Scissors size={18} />
             </div>
             <div>
-              <h3 style={{ fontSize: 16, fontWeight: 600 }}>Split & Extract PDF Pages</h3>
-              <p style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Select specific pages or input a range to save as a new PDF</p>
+              <h3 style={{ fontSize: 15, fontWeight: 700, letterSpacing: '-0.02em' }}>Split & Extract PDF Pages</h3>
+              <p style={{ fontSize: 11.5, color: 'var(--text-secondary)' }}>Select specific pages or input a range to save as a new PDF or PNG ZIP</p>
             </div>
           </div>
-          <button className="btn" onClick={onClose} style={{ padding: 6 }}>
+          <button className="btn" onClick={onClose} style={{ padding: 4 }}>
             <X size={18} color="var(--text-secondary)" />
           </button>
         </div>
 
         {/* Content */}
-        <div style={{ padding: 20, overflowY: 'auto', flex: 1 }}>
+        <div className="modal-body">
           {!file ? (
             <div
               onClick={() => fileInputRef.current?.click()}
               style={{
-                padding: '48px 16px', borderRadius: 14,
+                padding: '36px 16px', borderRadius: 14,
                 border: '2px dashed var(--glass-border)',
                 display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                 cursor: 'pointer', background: 'var(--glass-bg)',
@@ -159,19 +146,19 @@ export default function SplitPDFTool({ initialFile, onClose }) {
                 style={{ display: 'none' }}
                 onChange={e => e.target.files?.[0] && setFile(e.target.files[0])}
               />
-              <UploadCloud size={40} color="#ff3b30" />
-              <span style={{ fontSize: 15, fontWeight: 500, marginTop: 12 }}>Open a PDF to Split</span>
-              <span style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>Click to browse or drop file</span>
+              <UploadCloud size={36} color="#ff3b30" />
+              <span style={{ fontSize: 14, fontWeight: 600, marginTop: 10 }}>Open a PDF to Split</span>
+              <span style={{ fontSize: 11.5, color: 'var(--text-secondary)', marginTop: 2 }}>Tap or drag PDF document</span>
             </div>
           ) : (
             <div>
               {/* Range tools bar */}
               <div style={{
                 display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between',
-                gap: 10, padding: '12px 14px', borderRadius: 12, background: 'var(--glass-bg)',
-                border: '1px solid var(--glass-border)', marginBottom: 16,
+                gap: 8, padding: '10px 12px', borderRadius: 12, background: 'var(--glass-bg)',
+                border: '1px solid var(--glass-border)', marginBottom: 14,
               }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1, minWidth: 200 }}>
                   <input
                     type="text"
                     placeholder="e.g. 1-3, 5, 8-10"
@@ -179,22 +166,22 @@ export default function SplitPDFTool({ initialFile, onClose }) {
                     onChange={e => setRangeInput(e.target.value)}
                     style={{
                       background: 'var(--bg-color)', border: '1px solid var(--glass-border)',
-                      borderRadius: 8, padding: '5px 10px', fontSize: 13, color: 'var(--text-primary)',
-                      outline: 'none', width: 140,
+                      borderRadius: 8, padding: '5px 8px', fontSize: 12, color: 'var(--text-primary)',
+                      outline: 'none', flex: 1, minWidth: 90,
                     }}
                   />
-                  <button className="btn" onClick={applyRangeInput} style={{ padding: '6px 12px', fontSize: 12, border: '1px solid var(--glass-border)' }}>
-                    Apply Range
+                  <button className="btn" onClick={applyRangeInput} style={{ padding: '5px 10px', fontSize: 11.5, border: '1px solid var(--glass-border)', flexShrink: 0 }}>
+                    Apply
                   </button>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <button className="btn" onClick={selectAll} style={{ padding: '4px 8px', fontSize: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+                  <button className="btn" onClick={selectAll} style={{ padding: '4px 6px', fontSize: 11.5 }}>
                     Select All
                   </button>
-                  <div style={{ width: 1, height: 16, background: 'var(--glass-border)' }} />
-                  <button className="btn" onClick={deselectAll} style={{ padding: '4px 8px', fontSize: 12 }}>
-                    Deselect All
+                  <div style={{ width: 1, height: 14, background: 'var(--glass-border)' }} />
+                  <button className="btn" onClick={deselectAll} style={{ padding: '4px 6px', fontSize: 11.5 }}>
+                    Clear
                   </button>
                 </div>
               </div>
@@ -203,8 +190,8 @@ export default function SplitPDFTool({ initialFile, onClose }) {
               <Document file={file} onLoadSuccess={onDocLoad}>
                 <div style={{
                   display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))',
-                  gap: 14,
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(105px, 1fr))',
+                  gap: 10,
                 }}>
                   {Array.from({ length: numPages || 0 }, (_, i) => {
                     const isSelected = selectedPages.has(i);
@@ -215,20 +202,20 @@ export default function SplitPDFTool({ initialFile, onClose }) {
                         style={{
                           cursor: 'pointer',
                           borderRadius: 10,
-                          padding: 6,
+                          padding: 5,
                           background: isSelected ? 'rgba(255, 59, 48, 0.08)' : 'var(--glass-bg)',
                           border: isSelected ? '2px solid #ff3b30' : '1px solid var(--glass-border)',
                           display: 'flex',
                           flexDirection: 'column',
                           alignItems: 'center',
-                          gap: 6,
+                          gap: 4,
                           transition: 'all 0.15s ease',
                           position: 'relative',
                         }}
                       >
                         <div style={{
                           width: '100%',
-                          height: 160,
+                          height: 130,
                           borderRadius: 6,
                           overflow: 'hidden',
                           background: '#ffffff',
@@ -239,17 +226,17 @@ export default function SplitPDFTool({ initialFile, onClose }) {
                         }}>
                           <Page
                             pageNumber={i + 1}
-                            width={120}
+                            width={95}
                             renderTextLayer={false}
                             renderAnnotationLayer={false}
                           />
                         </div>
 
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 500 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 600 }}>
                           {isSelected ? (
-                            <CheckSquare size={14} color="#ff3b30" />
+                            <CheckSquare size={13} color="#ff3b30" />
                           ) : (
-                            <Square size={14} color="var(--text-secondary)" />
+                            <Square size={13} color="var(--text-secondary)" />
                           )}
                           <span>Page {i + 1}</span>
                         </div>
@@ -264,35 +251,32 @@ export default function SplitPDFTool({ initialFile, onClose }) {
 
         {/* Footer */}
         {file && (
-          <div style={{
-            padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            borderTop: '1px solid var(--glass-border)', background: 'var(--glass-bg)',
-          }}>
-            <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+          <div className="modal-footer">
+            <span className="desktop-only" style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
               {selectedPages.size} of {numPages || 0} page{numPages === 1 ? '' : 's'} selected
             </span>
 
-            <div style={{ display: 'flex', gap: 10 }}>
-              <button className="btn" onClick={onClose} disabled={isProcessing}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, width: '100%', justifyContent: 'flex-end' }}>
+              <button className="btn" onClick={onClose} disabled={isProcessing} style={{ flex: 'none' }}>
                 Cancel
               </button>
               <button
                 className="btn"
                 disabled={selectedPages.size === 0 || isProcessing}
                 onClick={() => handleExtract('png-zip')}
-                style={{ gap: 6, opacity: selectedPages.size === 0 ? 0.5 : 1 }}
-                title="Download extracted pages as individual high-res PNG images"
+                style={{ gap: 5, opacity: selectedPages.size === 0 ? 0.5 : 1, fontSize: 12 }}
+                title="Download extracted pages as individual PNG images"
               >
-                <FileImage size={15} color="#30b0c7" /> Download as PNGs (ZIP)
+                <FileImage size={14} color="#30b0c7" /> PNGs ZIP
               </button>
               <button
                 className="btn btn-primary"
                 disabled={selectedPages.size === 0 || isProcessing}
                 onClick={() => handleExtract('pdf')}
-                style={{ gap: 6, opacity: selectedPages.size === 0 ? 0.5 : 1 }}
+                style={{ gap: 5, opacity: selectedPages.size === 0 ? 0.5 : 1, fontSize: 12 }}
               >
-                {success ? <CheckCircle size={16} /> : <Download size={16} />}
-                {isProcessing ? 'Extracting…' : success ? successMsg : 'Extract & Download PDF'}
+                {success ? <CheckCircle size={14} /> : <Download size={14} />}
+                {isProcessing ? 'Extracting…' : success ? successMsg : 'Extract PDF'}
               </button>
             </div>
           </div>

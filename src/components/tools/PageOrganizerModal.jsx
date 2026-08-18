@@ -169,40 +169,26 @@ export default function PageOrganizerModal({
   };
 
   return (
-    <div style={{
-      position: 'fixed', inset: 0, zIndex: 200,
-      background: 'rgba(0, 0, 0, 0.7)', backdropFilter: 'blur(16px)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
-    }}>
+    <div className="modal-overlay">
       <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 15 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95 }}
-        className="glass-panel"
-        style={{
-          width: '100%', maxWidth: 960, height: '92vh',
-          display: 'flex', flexDirection: 'column',
-          background: 'var(--bg-color)', borderRadius: 20,
-          border: '1px solid var(--glass-border)', boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
-          overflow: 'hidden',
-          position: 'relative',
-        }}
+        className="modal-card glass-panel"
+        style={{ maxWidth: 960, height: '92vh' }}
       >
         {/* Header */}
-        <div style={{
-          padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          borderBottom: '1px solid var(--glass-border)',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(52, 199, 89, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#34c759' }}>
-              <LayoutGrid size={20} />
+        <div className="modal-header">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, overflow: 'hidden' }}>
+            <div style={{ width: 34, height: 34, borderRadius: 10, background: 'rgba(52, 199, 89, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#34c759', flexShrink: 0 }}>
+              <LayoutGrid size={18} />
             </div>
             <div>
-              <h3 style={{ fontSize: 16, fontWeight: 600 }}>Visual Page Organizer</h3>
-              <p style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Reorder, rotate, duplicate, or delete pages visually with full annotation tracking</p>
+              <h3 style={{ fontSize: 15, fontWeight: 700, letterSpacing: '-0.02em' }}>Visual Page Organizer</h3>
+              <p style={{ fontSize: 11.5, color: 'var(--text-secondary)' }}>Reorder, rotate, duplicate, or delete pages with annotation tracking</p>
             </div>
           </div>
-          <button className="btn" onClick={onClose} style={{ padding: 6 }}>
+          <button className="btn" onClick={onClose} style={{ padding: 4 }}>
             <X size={18} color="var(--text-secondary)" />
           </button>
         </div>
@@ -431,34 +417,33 @@ export default function PageOrganizerModal({
 
         {/* Footer */}
         {file && (
-          <div style={{
-            padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            borderTop: '1px solid var(--glass-border)', background: 'var(--glass-bg)',
-          }}>
-            <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+        {/* Footer */}
+        {file && (
+          <div className="modal-footer">
+            <span className="desktop-only" style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
               {pages.length} page{pages.length === 1 ? '' : 's'} in modified document
             </span>
 
-            <div style={{ display: 'flex', gap: 10 }}>
-              <button className="btn" onClick={onClose} disabled={isProcessing}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, width: '100%', justifyContent: 'flex-end' }}>
+              <button className="btn" onClick={onClose} disabled={isProcessing} style={{ flex: 'none' }}>
                 Cancel
               </button>
               <button
                 className="btn"
                 disabled={isProcessing}
                 onClick={() => handleSave('download')}
-                style={{ gap: 6 }}
+                style={{ gap: 5, fontSize: 12 }}
                 title="Download a separate copy"
               >
-                <Download size={15} /> Download Copy
+                <Download size={14} /> Download Copy
               </button>
               <button
                 className="btn btn-primary"
                 disabled={isProcessing}
                 onClick={() => handleSave('apply')}
-                style={{ gap: 6 }}
+                style={{ gap: 5, fontSize: 12 }}
               >
-                {isProcessing ? 'Applying…' : 'Apply Directly to Document'}
+                {isProcessing ? 'Applying…' : 'Apply to Document'}
               </button>
             </div>
           </div>

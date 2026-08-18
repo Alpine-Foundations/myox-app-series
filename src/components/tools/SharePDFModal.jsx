@@ -32,57 +32,46 @@ export default function SharePDFModal({ file, onClose }) {
   };
 
   return (
-    <div style={{
-      position: 'fixed', inset: 0, zIndex: 220,
-      background: 'rgba(0, 0, 0, 0.68)', backdropFilter: 'blur(18px)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
-    }}>
+  return (
+    <div className="modal-overlay">
       <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 15 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95 }}
-        className="glass-panel"
-        style={{
-          width: '100%', maxWidth: 480,
-          background: 'var(--bg-color)', borderRadius: 22,
-          border: '1px solid var(--glass-border)', boxShadow: '0 24px 70px rgba(0,0,0,0.35)',
-          overflow: 'hidden',
-        }}
+        className="modal-card glass-panel"
+        style={{ maxWidth: 480 }}
       >
         {/* Header */}
-        <div style={{
-          padding: '16px 22px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          borderBottom: '1px solid var(--glass-border)',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div className="modal-header">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, overflow: 'hidden' }}>
             <div style={{
-              width: 38, height: 38, borderRadius: 11,
+              width: 34, height: 34, borderRadius: 10,
               background: 'rgba(0, 113, 227, 0.15)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: 'var(--accent)',
+              color: 'var(--accent)', flexShrink: 0,
             }}>
-              <Share2 size={20} />
+              <Share2 size={18} />
             </div>
             <div>
-              <h3 style={{ fontSize: 17, fontWeight: 600 }}>Share PDF Document</h3>
-              <p style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Send privately via Email, WhatsApp, AirDrop, or Link</p>
+              <h3 style={{ fontSize: 15, fontWeight: 700, letterSpacing: '-0.02em' }}>Share PDF Document</h3>
+              <p style={{ fontSize: 11.5, color: 'var(--text-secondary)' }}>Send privately via Email, WhatsApp, AirDrop, or Link</p>
             </div>
           </div>
-          <button className="btn" onClick={onClose} style={{ padding: 6 }}>
+          <button className="btn" onClick={onClose} style={{ padding: 4 }}>
             <X size={18} color="var(--text-secondary)" />
           </button>
         </div>
 
         {/* Content */}
-        <div style={{ padding: 22, display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           {/* Native Share button if available */}
           {navigator.share && (
             <button
               className="btn btn-primary"
               onClick={handleNativeShare}
-              style={{ width: '100%', padding: '12px', fontSize: 14, gap: 8, justifyContent: 'center' }}
+              style={{ width: '100%', padding: '12px', fontSize: 13.5, gap: 8, justifyContent: 'center' }}
             >
-              <Share2 size={16} /> Share to Apps (AirDrop, WhatsApp, Teams)
+              <Share2 size={16} /> Share via System Apps (WhatsApp, AirDrop)
             </button>
           )}
 
@@ -92,26 +81,26 @@ export default function SharePDFModal({ file, onClose }) {
               className="btn"
               onClick={handleEmailShare}
               style={{
-                padding: '14px', borderRadius: 12, background: 'var(--glass-bg)',
+                padding: '12px', borderRadius: 12, background: 'var(--glass-bg)',
                 display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
               }}
             >
-              <Mail size={22} color="var(--accent)" />
-              <span style={{ fontSize: 13, fontWeight: 600 }}>Email Document</span>
-              <span style={{ fontSize: 10, color: 'var(--text-secondary)' }}>Open mail client</span>
+              <Mail size={20} color="var(--accent)" />
+              <span style={{ fontSize: 12.5, fontWeight: 600 }}>Email Document</span>
+              <span style={{ fontSize: 10.5, color: 'var(--text-secondary)' }}>Open mail client</span>
             </button>
 
             <button
               className="btn"
               onClick={handleCopyLink}
               style={{
-                padding: '14px', borderRadius: 12, background: 'var(--glass-bg)',
+                padding: '12px', borderRadius: 12, background: 'var(--glass-bg)',
                 display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
               }}
             >
-              {copied ? <Check size={22} color="#34c759" /> : <Copy size={22} color="var(--accent)" />}
-              <span style={{ fontSize: 13, fontWeight: 600 }}>{copied ? 'Link Copied!' : 'Copy App Link'}</span>
-              <span style={{ fontSize: 10, color: 'var(--text-secondary)' }}>Direct workspace URL</span>
+              {copied ? <Check size={20} color="#34c759" /> : <Copy size={20} color="var(--accent)" />}
+              <span style={{ fontSize: 12.5, fontWeight: 600 }}>{copied ? 'Link Copied!' : 'Copy App Link'}</span>
+              <span style={{ fontSize: 10.5, color: 'var(--text-secondary)' }}>Direct workspace URL</span>
             </button>
           </div>
 
@@ -119,23 +108,23 @@ export default function SharePDFModal({ file, onClose }) {
             padding: '10px 14px', borderRadius: 10, background: 'var(--glass-bg)',
             border: '1px solid var(--glass-border)', display: 'flex', alignItems: 'center', gap: 8,
           }}>
-            <ShieldCheck size={16} color="#34c759" />
+            <ShieldCheck size={16} color="#34c759" style={{ flexShrink: 0 }} />
             <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
-              100% Client-Side Privacy: Your document is never uploaded to public clouds.
+              100% Client-Side Privacy: Your document is processed locally in your browser.
             </span>
           </div>
         </div>
 
         {/* Footer */}
-        <div style={{
-          padding: '14px 22px', display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
-          borderTop: '1px solid var(--glass-border)', background: 'var(--glass-bg)',
-        }}>
-          <button className="btn" onClick={onClose}>
-            Close
-          </button>
+        <div className="modal-footer">
+          <div style={{ display: 'flex', gap: 8, width: '100%', justifyContent: 'flex-end' }}>
+            <button className="btn btn-primary" onClick={onClose} style={{ minWidth: 90 }}>
+              Done
+            </button>
+          </div>
         </div>
       </motion.div>
     </div>
+  );
   );
 }

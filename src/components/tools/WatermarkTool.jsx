@@ -194,57 +194,48 @@ export default function WatermarkTool({ initialFile, onClose, onUpdateDocument }
   };
 
   return (
-    <div style={{
-      position: 'fixed', inset: 0, zIndex: 220,
-      background: 'rgba(0, 0, 0, 0.68)', backdropFilter: 'blur(18px)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
-    }}>
+    <div className="modal-overlay">
       <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 15 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95 }}
-        className="glass-panel"
-        style={{
-          width: '100%', maxWidth: 620, maxHeight: '92vh',
-          display: 'flex', flexDirection: 'column',
-          background: 'var(--bg-color)', borderRadius: 22,
-          border: '1px solid var(--glass-border)', boxShadow: '0 24px 70px rgba(0,0,0,0.35)',
-          overflow: 'hidden',
-        }}
+        className="modal-card glass-panel"
+        style={{ maxWidth: 620 }}
       >
         {/* Header */}
-        <div style={{
-          padding: '16px 22px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          borderBottom: '1px solid var(--glass-border)',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div className="modal-header">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, overflow: 'hidden' }}>
             <div style={{
-              width: 38, height: 38, borderRadius: 11,
+              width: 34, height: 34, borderRadius: 10,
               background: 'rgba(255, 149, 0, 0.15)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: '#ff9500',
+              color: '#ff9500', flexShrink: 0,
             }}>
-              <Stamp size={20} />
+              <Stamp size={18} />
             </div>
             <div>
-              <h3 style={{ fontSize: 17, fontWeight: 600 }}>Watermark & Page Tint Studio</h3>
-              <p style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Apply direct text stamps, image watermarks, or eye-comfort page shades</p>
+              <h3 style={{ fontSize: 15, fontWeight: 700, letterSpacing: '-0.02em' }}>Watermark & Page Tint Studio</h3>
+              <p style={{ fontSize: 11.5, color: 'var(--text-secondary)' }}>Apply direct text stamps, image watermarks, or eye-comfort page shades</p>
             </div>
           </div>
-          <button className="btn" onClick={onClose} style={{ padding: 6 }}>
+          <button className="btn" onClick={onClose} style={{ padding: 4 }}>
             <X size={18} color="var(--text-secondary)" />
           </button>
         </div>
 
-        {/* Tab Selection */}
-        <div style={{
-          display: 'flex', padding: '8px 22px 0', gap: 6,
-          borderBottom: '1px solid var(--glass-border)', background: 'var(--glass-bg)',
-        }}>
+        {/* Tab Selection (Swipeable without overflow) */}
+        <div 
+          className="no-scrollbar"
+          style={{
+            display: 'flex', padding: '6px 14px 0', gap: 4,
+            borderBottom: '1px solid var(--glass-border)', background: 'var(--glass-bg)',
+            overflowX: 'auto', WebkitOverflowScrolling: 'touch',
+          }}
+        >
           {[
-            { id: 'text', label: 'Text Watermark', icon: Type },
-            { id: 'image', label: 'Image / Logo Watermark', icon: FileImage },
-            { id: 'tint', label: 'Page Background Tint', icon: Eye },
+            { id: 'text', label: 'Text Watermark', mobileLabel: 'Text', icon: Type },
+            { id: 'image', label: 'Image / Logo Watermark', mobileLabel: 'Image Logo', icon: FileImage },
+            { id: 'tint', label: 'Page Background Tint', mobileLabel: 'Page Tint', icon: Eye },
           ].map(t => {
             const Icon = t.icon;
             const isActive = activeTab === t.id;
@@ -254,15 +245,18 @@ export default function WatermarkTool({ initialFile, onClose, onUpdateDocument }
                 className="btn"
                 onClick={() => setActiveTab(t.id)}
                 style={{
-                  padding: '8px 16px', fontSize: 13, gap: 7,
+                  padding: '7px 12px', fontSize: 12.5, gap: 6,
                   borderBottom: isActive ? '2px solid var(--accent)' : '2px solid transparent',
                   borderRadius: 0,
                   color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
-                  fontWeight: isActive ? 600 : 400,
+                  fontWeight: isActive ? 700 : 500,
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0,
                 }}
               >
-                <Icon size={15} color={isActive ? 'var(--accent)' : 'currentColor'} />
-                {t.label}
+                <Icon size={14} color={isActive ? 'var(--accent)' : 'currentColor'} />
+                <span className="desktop-only">{t.label}</span>
+                <span className="mobile-only">{t.mobileLabel}</span>
               </button>
             );
           })}
@@ -702,35 +696,28 @@ export default function WatermarkTool({ initialFile, onClose, onUpdateDocument }
         </div>
 
         {/* Footer Actions */}
-        <div style={{
-          padding: '14px 22px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          borderTop: '1px solid var(--glass-border)', background: 'var(--glass-bg)',
-        }}>
-          <button className="btn" onClick={onClose} disabled={isProcessing}>
-            Cancel
-          </button>
-
-          <div style={{ display: 'flex', gap: 10 }}>
-            {/* Optional Download Copy */}
+        <div className="modal-footer">
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, width: '100%', justifyContent: 'flex-end' }}>
+            <button className="btn" onClick={onClose} disabled={isProcessing} style={{ flex: 'none' }}>
+              Cancel
+            </button>
             <button
               className="btn"
               onClick={() => processWatermark('download')}
               disabled={isProcessing || !file || (activeTab === 'image' && !imageFile)}
-              style={{ gap: 6 }}
+              style={{ gap: 5, fontSize: 12 }}
               title="Save as a separate downloaded file"
             >
-              <Download size={15} /> Download Copy
+              <Download size={14} /> Download Copy
             </button>
-
-            {/* Direct in-place Apply */}
             <button
               className="btn btn-primary"
               onClick={() => processWatermark('apply')}
               disabled={isProcessing || !file || (activeTab === 'image' && !imageFile)}
-              style={{ gap: 6 }}
+              style={{ gap: 5, fontSize: 12 }}
             >
-              <Check size={16} />
-              {isProcessing ? 'Processing…' : 'Apply Directly to Document'}
+              <Check size={14} />
+              {isProcessing ? 'Processing…' : 'Apply to Document'}
             </button>
           </div>
         </div>

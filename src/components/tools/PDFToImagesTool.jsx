@@ -34,45 +34,32 @@ export default function PDFToImagesTool({ initialFile, onClose }) {
   };
 
   return (
-    <div style={{
-      position: 'fixed', inset: 0, zIndex: 200,
-      background: 'rgba(0, 0, 0, 0.65)', backdropFilter: 'blur(16px)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
-    }}>
+    <div className="modal-overlay">
       <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 15 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95 }}
-        className="glass-panel"
-        style={{
-          width: '100%', maxWidth: 520,
-          display: 'flex', flexDirection: 'column',
-          background: 'var(--bg-color)', borderRadius: 20,
-          border: '1px solid var(--glass-border)', boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
-          overflow: 'hidden',
-        }}
+        className="modal-card glass-panel"
+        style={{ maxWidth: 520 }}
       >
         {/* Header */}
-        <div style={{
-          padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          borderBottom: '1px solid var(--glass-border)',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(48, 176, 199, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#30b0c7' }}>
-              <FileImage size={20} />
+        <div className="modal-header">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, overflow: 'hidden' }}>
+            <div style={{ width: 34, height: 34, borderRadius: 10, background: 'rgba(48, 176, 199, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#30b0c7', flexShrink: 0 }}>
+              <FileImage size={18} />
             </div>
             <div>
-              <h3 style={{ fontSize: 16, fontWeight: 600 }}>PDF to High-Res Images</h3>
-              <p style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Extract all pages as high-resolution PNG/JPG files in a ZIP</p>
+              <h3 style={{ fontSize: 15, fontWeight: 700, letterSpacing: '-0.02em' }}>PDF to High-Res Images</h3>
+              <p style={{ fontSize: 11.5, color: 'var(--text-secondary)' }}>Extract all pages as crisp PNG or JPG files in a ZIP archive</p>
             </div>
           </div>
-          <button className="btn" onClick={onClose} style={{ padding: 6 }}>
+          <button className="btn" onClick={onClose} style={{ padding: 4 }}>
             <X size={18} color="var(--text-secondary)" />
           </button>
         </div>
 
         {/* Content */}
-        <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {!file ? (
             <div
               onClick={() => fileInputRef.current?.click()}
@@ -90,30 +77,31 @@ export default function PDFToImagesTool({ initialFile, onClose }) {
                 style={{ display: 'none' }}
                 onChange={e => e.target.files?.[0] && setFile(e.target.files[0])}
               />
-              <UploadCloud size={36} color="#30b0c7" />
-              <span style={{ fontSize: 14, fontWeight: 500, marginTop: 10 }}>Select a PDF Document</span>
+              <UploadCloud size={32} color="#30b0c7" />
+              <span style={{ fontSize: 13.5, fontWeight: 600, marginTop: 10 }}>Select a PDF Document</span>
               <span style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>Click to browse or drop file</span>
             </div>
           ) : (
             <>
               <Document file={file} onLoadSuccess={(doc) => setPdfDoc(doc)}>
                 <div style={{
-                  padding: '12px 14px', borderRadius: 10, background: 'var(--glass-bg)',
-                  border: '1px solid var(--glass-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '12px 14px', borderRadius: 12,
+                  background: 'var(--glass-bg)', border: '1px solid var(--glass-border)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <Archive size={18} color="#30b0c7" />
-                    <div>
-                      <div style={{ fontSize: 13, fontWeight: 500 }}>{file.name}</div>
-                      <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
-                        {pdfDoc ? `${pdfDoc.numPages} pages detected` : 'Analyzing document…'}
-                      </div>
-                    </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, overflow: 'hidden' }}>
+                    <Archive size={18} color="var(--accent)" />
+                    <span style={{ fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {file.name}
+                    </span>
                   </div>
+                  <span style={{ fontSize: 11, color: 'var(--text-secondary)', flexShrink: 0 }}>
+                    {pdfDoc?.numPages || '…'} pages
+                  </span>
                 </div>
               </Document>
 
-              {/* Format selection */}
+              {/* Format Choice */}
               <div>
                 <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>
                   Image Format
@@ -123,7 +111,7 @@ export default function PDFToImagesTool({ initialFile, onClose }) {
                     className="btn"
                     onClick={() => setFormat('image/png')}
                     style={{
-                      padding: '8px 12px', fontSize: 13, borderRadius: 8,
+                      padding: '8px 10px', fontSize: 12, borderRadius: 8,
                       background: format === 'image/png' ? 'var(--accent)' : 'var(--glass-bg)',
                       color: format === 'image/png' ? 'var(--bg-color)' : 'var(--text-primary)',
                       border: '1px solid var(--glass-border)',
@@ -135,7 +123,7 @@ export default function PDFToImagesTool({ initialFile, onClose }) {
                     className="btn"
                     onClick={() => setFormat('image/jpeg')}
                     style={{
-                      padding: '8px 12px', fontSize: 13, borderRadius: 8,
+                      padding: '8px 10px', fontSize: 12, borderRadius: 8,
                       background: format === 'image/jpeg' ? 'var(--accent)' : 'var(--glass-bg)',
                       color: format === 'image/jpeg' ? 'var(--bg-color)' : 'var(--text-primary)',
                       border: '1px solid var(--glass-border)',
@@ -146,16 +134,16 @@ export default function PDFToImagesTool({ initialFile, onClose }) {
                 </div>
               </div>
 
-              {/* Quality Resolution scale */}
+              {/* Resolution Choice */}
               <div>
                 <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>
                   Resolution / DPI Scale
                 </label>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
                   {[
-                    { val: 1.5, label: 'Standard (1.5x)' },
-                    { val: 2.0, label: 'High (2x DPI)' },
-                    { val: 3.0, label: 'Ultra (3x HD)' },
+                    { val: 1.5, label: '1.5x' },
+                    { val: 2.0, label: '2x DPI' },
+                    { val: 3.0, label: '3x HD' },
                   ].map(q => (
                     <button
                       key={q.val}
@@ -179,16 +167,13 @@ export default function PDFToImagesTool({ initialFile, onClose }) {
 
         {/* Footer */}
         {file && (
-          <div style={{
-            padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            borderTop: '1px solid var(--glass-border)', background: 'var(--glass-bg)',
-          }}>
-            <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+          <div className="modal-footer">
+            <span className="desktop-only" style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
               Ready to generate ZIP
             </span>
 
-            <div style={{ display: 'flex', gap: 10 }}>
-              <button className="btn" onClick={onClose}>
+            <div style={{ display: 'flex', gap: 8, width: '100%', justifyContent: 'flex-end' }}>
+              <button className="btn" onClick={onClose} style={{ flex: 'none' }}>
                 Cancel
               </button>
               <button
@@ -197,8 +182,8 @@ export default function PDFToImagesTool({ initialFile, onClose }) {
                 onClick={handleExport}
                 style={{ gap: 6 }}
               >
-                {success ? <CheckCircle size={16} /> : <Download size={16} />}
-                {isProcessing ? 'Rendering Pages to ZIP…' : success ? 'Downloaded ZIP!' : 'Convert & Download ZIP'}
+                {success ? <CheckCircle size={15} /> : <Download size={15} />}
+                {isProcessing ? 'Rendering ZIP…' : success ? 'Downloaded ZIP!' : 'Convert & Download ZIP'}
               </button>
             </div>
           </div>

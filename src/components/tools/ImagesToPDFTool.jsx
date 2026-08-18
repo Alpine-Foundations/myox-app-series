@@ -58,104 +58,81 @@ export default function ImagesToPDFTool({ onClose }) {
   };
 
   return (
-    <div style={{
-      position: 'fixed', inset: 0, zIndex: 200,
-      background: 'rgba(0, 0, 0, 0.65)', backdropFilter: 'blur(16px)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
-    }}>
+    <div className="modal-overlay">
       <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 15 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95 }}
-        className="glass-panel"
-        style={{
-          width: '100%', maxWidth: 680, maxHeight: '90vh',
-          display: 'flex', flexDirection: 'column',
-          background: 'var(--bg-color)', borderRadius: 20,
-          border: '1px solid var(--glass-border)', boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
-          overflow: 'hidden',
-        }}
+        className="modal-card glass-panel"
+        style={{ maxWidth: 680 }}
       >
         {/* Header */}
-        <div style={{
-          padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          borderBottom: '1px solid var(--glass-border)',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(52, 199, 89, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#34c759' }}>
-              <Image size={20} />
+        <div className="modal-header">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, overflow: 'hidden' }}>
+            <div style={{ width: 34, height: 34, borderRadius: 10, background: 'rgba(52, 199, 89, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#34c759', flexShrink: 0 }}>
+              <Image size={18} />
             </div>
             <div>
-              <h3 style={{ fontSize: 16, fontWeight: 600 }}>Images to PDF Converter</h3>
-              <p style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Convert JPG, PNG, and WebP images into a clean multi-page PDF</p>
+              <h3 style={{ fontSize: 15, fontWeight: 700, letterSpacing: '-0.02em' }}>Images to PDF Converter</h3>
+              <p style={{ fontSize: 11.5, color: 'var(--text-secondary)' }}>Convert JPG, PNG, and WebP images into a clean multi-page PDF</p>
             </div>
           </div>
-          <button className="btn" onClick={onClose} style={{ padding: 6 }}>
+          <button className="btn" onClick={onClose} style={{ padding: 4 }}>
             <X size={18} color="var(--text-secondary)" />
           </button>
         </div>
 
         {/* Content */}
-        <div style={{ padding: 20, overflowY: 'auto', flex: 1 }}>
+        <div className="modal-body">
           <div
             onClick={() => fileInputRef.current?.click()}
             style={{
-              padding: '28px 16px', borderRadius: 14,
+              padding: '24px 16px', borderRadius: 14,
               border: '2px dashed var(--glass-border)',
               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-              cursor: 'pointer', background: 'var(--glass-bg)', marginBottom: 20,
+              cursor: 'pointer', background: 'var(--glass-bg)', marginBottom: 16,
             }}
           >
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/png, image/jpeg, image/webp"
+              accept="image/*"
               multiple
               style={{ display: 'none' }}
               onChange={handleImagesAdded}
             />
-            <UploadCloud size={36} color="#34c759" />
-            <span style={{ fontSize: 14, fontWeight: 500, marginTop: 8 }}>Click or drop photos & images</span>
-            <span style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>Supports PNG, JPG, JPEG</span>
+            <UploadCloud size={30} color="#34c759" />
+            <span style={{ fontSize: 13.5, fontWeight: 600, marginTop: 8 }}>Click or drop Images to add</span>
+            <span style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>Supports PNG, JPG, JPEG, and WebP</span>
           </div>
 
-          {/* Image grid */}
+          {/* Grid Preview */}
           {images.length > 0 && (
             <div>
-              <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              <span style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                 Images ({images.length})
               </span>
               <div style={{
-                display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))',
-                gap: 12, marginTop: 10,
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))',
+                gap: 10, marginTop: 8,
               }}>
-                {images.map((item, idx) => (
+                {images.map((img, idx) => (
                   <div
-                    key={item.id}
-                    className="glass-panel"
+                    key={img.id}
                     style={{
-                      padding: 6, borderRadius: 10,
-                      display: 'flex', flexDirection: 'column', alignItems: 'center',
+                      borderRadius: 10, overflow: 'hidden',
                       background: 'var(--glass-bg)', border: '1px solid var(--glass-border)',
+                      padding: 6, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
                     }}
                   >
-                    <div style={{
-                      width: '100%', height: 110, borderRadius: 6,
-                      overflow: 'hidden', background: '#000', display: 'flex',
-                      alignItems: 'center', justifyContent: 'center',
-                    }}>
-                      <img
-                        src={item.previewUrl}
-                        alt="preview"
-                        style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-                      />
-                    </div>
-
-                    <div style={{
-                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                      width: '100%', marginTop: 6,
-                    }}>
-                      <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)' }}>
+                    <img
+                      src={img.previewUrl}
+                      alt={img.file.name}
+                      style={{ width: '100%', height: 90, objectFit: 'cover', borderRadius: 6 }}
+                    />
+                    <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span style={{ fontSize: 10.5, fontWeight: 600, color: 'var(--text-secondary)' }}>
                         #{idx + 1}
                       </span>
                       <div style={{ display: 'flex', gap: 2 }}>
@@ -192,16 +169,13 @@ export default function ImagesToPDFTool({ onClose }) {
         </div>
 
         {/* Footer */}
-        <div style={{
-          padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          borderTop: '1px solid var(--glass-border)', background: 'var(--glass-bg)',
-        }}>
-          <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+        <div className="modal-footer">
+          <span className="desktop-only" style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
             {images.length} image{images.length === 1 ? '' : 's'} queued
           </span>
 
-          <div style={{ display: 'flex', gap: 10 }}>
-            <button className="btn" onClick={onClose}>
+          <div style={{ display: 'flex', gap: 8, width: '100%', justifyContent: 'flex-end' }}>
+            <button className="btn" onClick={onClose} style={{ flex: 'none' }}>
               Cancel
             </button>
             <button
@@ -210,7 +184,7 @@ export default function ImagesToPDFTool({ onClose }) {
               onClick={handleConvert}
               style={{ gap: 6, opacity: images.length === 0 ? 0.5 : 1 }}
             >
-              {success ? <CheckCircle size={16} /> : <Download size={16} />}
+              {success ? <CheckCircle size={15} /> : <Download size={15} />}
               {isProcessing ? 'Converting…' : success ? 'Converted & Saved!' : 'Convert to PDF'}
             </button>
           </div>

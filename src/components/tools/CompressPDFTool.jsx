@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { Minimize2, UploadCloud, Download, X, CheckCircle, Zap, ShieldCheck, Check, Sparkles } from 'lucide-react';
+import { Minimize2, UploadCloud, Download, X, CheckCircle, Check } from 'lucide-react';
 import { compressPDFDocument, downloadFile } from '../../utils/pdfEngine';
 
 function formatBytes(bytes) {
@@ -80,50 +80,37 @@ export default function CompressPDFTool({ initialFile, onClose, onUpdateDocument
   };
 
   return (
-    <div style={{
-      position: 'fixed', inset: 0, zIndex: 220,
-      background: 'rgba(0, 0, 0, 0.68)', backdropFilter: 'blur(18px)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
-    }}>
+    <div className="modal-overlay">
       <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 15 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95 }}
-        className="glass-panel"
-        style={{
-          width: '100%', maxWidth: 560, maxHeight: '92vh',
-          display: 'flex', flexDirection: 'column',
-          background: 'var(--bg-color)', borderRadius: 22,
-          border: '1px solid var(--glass-border)', boxShadow: '0 24px 70px rgba(0,0,0,0.35)',
-          overflow: 'hidden',
-        }}
+        className="modal-card glass-panel"
+        style={{ maxWidth: 560 }}
       >
         {/* Header */}
-        <div style={{
-          padding: '16px 22px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          borderBottom: '1px solid var(--glass-border)',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div className="modal-header">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, overflow: 'hidden' }}>
             <div style={{
-              width: 38, height: 38, borderRadius: 11,
+              width: 34, height: 34, borderRadius: 10,
               background: 'rgba(52, 199, 89, 0.15)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: '#34c759',
+              color: '#34c759', flexShrink: 0,
             }}>
-              <Minimize2 size={20} />
+              <Minimize2 size={18} />
             </div>
             <div>
-              <h3 style={{ fontSize: 17, fontWeight: 600 }}>Compress & Optimize PDF</h3>
-              <p style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Shrink file size in browser memory with zero quality compromise</p>
+              <h3 style={{ fontSize: 15, fontWeight: 700, letterSpacing: '-0.02em' }}>Compress & Optimize PDF</h3>
+              <p style={{ fontSize: 11.5, color: 'var(--text-secondary)' }}>Shrink file size in browser memory with zero compromise</p>
             </div>
           </div>
-          <button className="btn" onClick={onClose} style={{ padding: 6 }}>
+          <button className="btn" onClick={onClose} style={{ padding: 4 }}>
             <X size={18} color="var(--text-secondary)" />
           </button>
         </div>
 
         {/* Content */}
-        <div style={{ padding: 22, overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {!file ? (
             <div
               onClick={() => fileInputRef.current?.click()}
@@ -141,86 +128,62 @@ export default function CompressPDFTool({ initialFile, onClose, onUpdateDocument
                 style={{ display: 'none' }}
                 onChange={e => e.target.files?.[0] && setFile(e.target.files[0])}
               />
-              <UploadCloud size={38} color="#34c759" />
-              <span style={{ fontSize: 14, fontWeight: 500, marginTop: 10 }}>Select PDF to Compress</span>
+              <UploadCloud size={32} color="#34c759" />
+              <span style={{ fontSize: 13.5, fontWeight: 600, marginTop: 10 }}>Select a PDF Document</span>
               <span style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>Click to browse or drop file</span>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              {/* File details card */}
+              {/* Document stats */}
               <div style={{
-                padding: '12px 16px', borderRadius: 12,
+                padding: '12px 14px', borderRadius: 12,
                 background: 'var(--glass-bg)', border: '1px solid var(--glass-border)',
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
               }}>
-                <div>
-                  <span style={{ fontSize: 13, fontWeight: 600, display: 'block' }}>{file.name}</span>
-                  <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Current Size: {formatBytes(file.size)}</span>
-                </div>
-                <Zap size={20} color="#34c759" />
+                <span style={{ fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {file.name}
+                </span>
+                <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', flexShrink: 0 }}>
+                  {formatBytes(file.size)}
+                </span>
               </div>
 
-              {/* Compression Tiers */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
-                  Select Compression Strength:
-                </span>
-                {COMPRESSION_TIERS.map(t => {
-                  const isSelected = level === t.id;
+              {/* Quality level tiles */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {COMPRESSION_TIERS.map(p => {
+                  const isSelected = level === p.id;
                   return (
                     <div
-                      key={t.id}
-                      onClick={() => setLevel(t.id)}
+                      key={p.id}
+                      onClick={() => setLevel(p.id)}
                       style={{
-                        padding: '12px 14px', borderRadius: 12, cursor: 'pointer',
-                        background: isSelected ? 'rgba(52, 199, 89, 0.12)' : 'var(--glass-bg)',
-                        border: isSelected ? '2px solid #34c759' : '1px solid var(--glass-border)',
+                        padding: '10px 14px', borderRadius: 12, cursor: 'pointer',
+                        background: isSelected ? 'var(--accent-soft)' : 'var(--glass-bg)',
+                        border: isSelected ? '2px solid var(--accent)' : '1px solid var(--glass-border)',
                         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                        transition: 'all 0.15s ease',
                       }}
                     >
                       <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <span style={{ fontSize: 13, fontWeight: 600, color: isSelected ? '#34c759' : 'var(--text-primary)' }}>
-                            {t.label}
-                          </span>
-                          <span style={{
-                            fontSize: 10, padding: '2px 6px', borderRadius: 10,
-                            background: isSelected ? '#34c759' : 'var(--glass-border)',
-                            color: isSelected ? '#ffffff' : 'var(--text-secondary)',
-                            fontWeight: 600,
-                          }}>
-                            {t.badge}
-                          </span>
-                        </div>
-                        <span style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2, display: 'block' }}>
-                          {t.desc}
-                        </span>
+                        <span style={{ fontSize: 13, fontWeight: 700, display: 'block' }}>{p.label}</span>
+                        <span style={{ fontSize: 11.5, color: 'var(--text-secondary)' }}>{p.desc}</span>
                       </div>
-                      {isSelected && <Check size={18} color="#34c759" />}
+                      {isSelected && <Check size={16} color="var(--accent)" />}
                     </div>
                   );
                 })}
               </div>
 
-              {/* Result Stats Banner */}
+              {/* Result stats banner */}
               {resultStats && (
                 <div style={{
-                  padding: '12px 16px', borderRadius: 12, background: 'rgba(52, 199, 89, 0.15)',
+                  padding: '10px 14px', borderRadius: 10, background: 'rgba(52, 199, 89, 0.15)',
                   border: '1px solid rgba(52, 199, 89, 0.3)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  display: 'flex', alignItems: 'center', gap: 8,
                 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <CheckCircle size={18} color="#34c759" />
-                    <div>
-                      <span style={{ fontSize: 13, fontWeight: 600, color: '#34c759' }}>
-                        Compressed from {resultStats.originalSize} → {resultStats.newSize}
-                      </span>
-                      <span style={{ fontSize: 11, color: 'var(--text-secondary)', display: 'block' }}>
-                        Saved {resultStats.savings}% of storage space
-                      </span>
-                    </div>
-                  </div>
+                  <CheckCircle size={16} color="#34c759" />
+                  <span style={{ fontSize: 12.5, fontWeight: 600, color: '#34c759' }}>
+                    Compressed {resultStats.originalSize} → {resultStats.newSize} (Saved {resultStats.savings}%)
+                  </span>
                 </div>
               )}
             </div>
@@ -228,32 +191,28 @@ export default function CompressPDFTool({ initialFile, onClose, onUpdateDocument
         </div>
 
         {/* Footer */}
-        <div style={{
-          padding: '14px 22px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          borderTop: '1px solid var(--glass-border)', background: 'var(--glass-bg)',
-        }}>
-          <button className="btn" onClick={onClose} disabled={isProcessing}>
-            Cancel
-          </button>
-
-          <div style={{ display: 'flex', gap: 10 }}>
+        <div className="modal-footer">
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, width: '100%', justifyContent: 'flex-end' }}>
+            <button className="btn" onClick={onClose} disabled={isProcessing} style={{ flex: 'none' }}>
+              Cancel
+            </button>
             <button
               className="btn"
               onClick={() => handleCompress('download')}
               disabled={isProcessing || !file}
-              style={{ gap: 6 }}
+              style={{ gap: 5, fontSize: 12 }}
               title="Save as a downloaded copy"
             >
-              <Download size={15} /> Download Copy
+              <Download size={14} /> Download Copy
             </button>
             <button
               className="btn btn-primary"
               onClick={() => handleCompress('apply')}
               disabled={isProcessing || !file}
-              style={{ gap: 6 }}
+              style={{ gap: 5, fontSize: 12 }}
             >
-              <Check size={16} />
-              {isProcessing ? 'Compressing in browser…' : 'Apply to Current Document'}
+              <Check size={14} />
+              {isProcessing ? 'Compressing…' : 'Apply to Document'}
             </button>
           </div>
         </div>
