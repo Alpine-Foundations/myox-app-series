@@ -32,7 +32,6 @@ export default function SharePDFModal({ file, onClose }) {
   };
 
   return (
-  return (
     <div className="modal-overlay">
       <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 15 }}
@@ -125,6 +124,5 @@ export default function SharePDFModal({ file, onClose }) {
         </div>
       </motion.div>
     </div>
-  );
   );
 }

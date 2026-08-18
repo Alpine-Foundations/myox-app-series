@@ -1976,45 +1976,6 @@ export default function PDFViewer({
                   </button>
                 )}
               </div>
-                  className="btn"
-                  onClick={() => setSidebarTab('thumbnails')}
-                  style={{
-                    flex: 1, padding: '5px 4px', fontSize: 11, gap: 4,
-                    background: sidebarTab === 'thumbnails' ? 'var(--glass-border)' : 'transparent',
-                    color: sidebarTab === 'thumbnails' ? 'var(--text-primary)' : 'var(--text-secondary)',
-                    borderRadius: 6,
-                  }}
-                  title="Page Thumbnails"
-                >
-                  <LayoutGrid size={13} /> Pages
-                </button>
-                <button
-                  className="btn"
-                  onClick={() => setSidebarTab('outline')}
-                  style={{
-                    flex: 1, padding: '5px 4px', fontSize: 11, gap: 4,
-                    background: sidebarTab === 'outline' ? 'var(--glass-border)' : 'transparent',
-                    color: sidebarTab === 'outline' ? 'var(--text-primary)' : 'var(--text-secondary)',
-                    borderRadius: 6,
-                  }}
-                  title="Table of Contents"
-                >
-                  <Bookmark size={13} /> Outline
-                </button>
-                <button
-                  className="btn"
-                  onClick={() => setSidebarTab('search')}
-                  style={{
-                    flex: 1, padding: '5px 4px', fontSize: 11, gap: 4,
-                    background: sidebarTab === 'search' ? 'var(--glass-border)' : 'transparent',
-                    color: sidebarTab === 'search' ? 'var(--text-primary)' : 'var(--text-secondary)',
-                    borderRadius: 6,
-                  }}
-                  title="Search Results"
-                >
-                  <Search size={13} /> Results {searchResults.length > 0 && `(${searchResults.length})`}
-                </button>
-              </div>
 
               {/* Sidebar Content */}
               <div style={{ width: '100%', padding: '12px 6px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>

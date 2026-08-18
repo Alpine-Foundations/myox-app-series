@@ -417,8 +417,6 @@ export default function PageOrganizerModal({
 
         {/* Footer */}
         {file && (
-        {/* Footer */}
-        {file && (
           <div className="modal-footer">
             <span className="desktop-only" style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
               {pages.length} page{pages.length === 1 ? '' : 's'} in modified document
