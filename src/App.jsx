@@ -56,7 +56,7 @@ export default function App() {
     const { outcome } = await pwaPrompt.userChoice;
     if (outcome === 'accepted') {
       setPwaPrompt(null);
-      setDropToast('MyOxia App installed successfully!');
+      setDropToast('MyOx App installed successfully!');
       setTimeout(() => setDropToast(''), 3000);
     }
   };
@@ -178,7 +178,16 @@ export default function App() {
 
   return (
     <div 
-      style={{ display: 'flex', flexDirection: 'column', height: '100vh', width: '100vw', background: 'var(--bg-color)', position: 'relative' }}
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100vh',
+        width: '100vw',
+        maxWidth: '100vw',
+        background: 'var(--bg-color)',
+        position: 'relative',
+        overflow: 'hidden',
+      }}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
@@ -199,10 +208,10 @@ export default function App() {
             exit={{ opacity: 0, y: -16, scale: 0.96 }}
             transition={{ type: 'spring', stiffness: 400, damping: 30 }}
             style={{
-              position: 'fixed', top: 24, left: '50%', transform: 'translateX(-50%)',
+              position: 'fixed', top: 20, left: '50%', transform: 'translateX(-50%)',
               zIndex: 999, background: 'var(--accent)', color: 'var(--bg-color)',
-              padding: '8px 18px', borderRadius: 99, fontSize: 13, fontWeight: 500,
-              boxShadow: 'var(--shadow-lg)',
+              padding: '8px 18px', borderRadius: 99, fontSize: 13, fontWeight: 600,
+              boxShadow: 'var(--shadow-lg)', maxWidth: '90vw', textAlign: 'center',
             }}
           >
             {dropToast}
@@ -235,29 +244,29 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      {/* Top Navbar */}
+      {/* ── Top Navbar (Zero Overflow Responsive Design) ── */}
       <nav className="glass-panel" style={{ 
-        position: 'fixed', top: 16, left: 20, right: 20, 
-        height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '0 20px', zIndex: 50, borderRadius: 'var(--radius-lg)',
+        position: 'fixed', top: 14, left: 16, right: 16, 
+        height: 52, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '0 14px', zIndex: 50, borderRadius: 'var(--radius-lg)',
       }}>
-        {/* Brand Logo with Official Icon */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        {/* Brand Logo & Series Badge */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
           <img 
             src="./favicon.png" 
-            alt="MyOxia" 
-            style={{ width: 28, height: 28, borderRadius: 8, objectFit: 'contain', background: 'var(--accent-soft)', padding: 2 }} 
+            alt="MyOx" 
+            style={{ width: 26, height: 26, borderRadius: 7, objectFit: 'contain', background: 'var(--accent-soft)', padding: 2 }} 
           />
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ fontSize: 14, fontWeight: 700, letterSpacing: '-0.02em' }}>
-              MyOxia
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 5 }}>
+            <span style={{ fontSize: 15, fontWeight: 800, letterSpacing: '-0.03em', color: 'var(--text-primary)' }}>
+              MyOx
             </span>
-            <span style={{
-              fontSize: 10, padding: '1px 6px', borderRadius: 6,
+            <span className="desktop-only" style={{
+              fontSize: 9, padding: '1px 5px', borderRadius: 5,
               background: 'var(--accent-soft)', color: 'var(--text-secondary)',
-              fontWeight: 600, letterSpacing: '0.04em',
+              fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase',
             }}>
-              PRO
+              Alpine Foundations
             </span>
           </div>
         </div>
@@ -265,11 +274,11 @@ export default function App() {
         {/* Center Segmented Control with Gliding Pill Indicator */}
         <div style={{
           display: 'flex', alignItems: 'center', background: 'var(--bg-subtle)',
-          borderRadius: 'var(--radius-md)', padding: 3, gap: 3, position: 'relative',
+          borderRadius: 'var(--radius-md)', padding: 2, gap: 2, position: 'relative',
         }}>
           {[
-            { id: 'reader', label: 'Document Viewer', icon: BookOpen },
-            { id: 'tools', label: 'PDF Utilities', icon: Wand2 },
+            { id: 'reader', label: 'Viewer', fullLabel: 'Document Viewer', icon: BookOpen },
+            { id: 'tools', label: 'Utilities', fullLabel: 'PDF Utilities', icon: Wand2 },
           ].map(tab => {
             const Icon = tab.icon;
             const isSelected = activeTab === tab.id;
@@ -280,9 +289,9 @@ export default function App() {
                 whileTap={{ scale: 0.96 }}
                 style={{
                   position: 'relative',
-                  padding: '6px 14px',
-                  fontSize: 13,
-                  fontWeight: isSelected ? 600 : 500,
+                  padding: '5px 12px',
+                  fontSize: 12.5,
+                  fontWeight: isSelected ? 700 : 500,
                   color: isSelected ? 'var(--text-primary)' : 'var(--text-secondary)',
                   borderRadius: 'var(--radius-sm)',
                   border: 'none',
@@ -290,7 +299,7 @@ export default function App() {
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: 6,
+                  gap: 5,
                   zIndex: 2,
                   transition: 'color 0.15s ease',
                 }}
@@ -309,26 +318,27 @@ export default function App() {
                     }}
                   />
                 )}
-                <Icon size={14} />
-                <span className="nav-tab-label">{tab.label}</span>
+                <Icon size={13} />
+                <span className="desktop-only">{tab.fullLabel}</span>
+                <span className="mobile-only">{tab.label}</span>
               </motion.button>
             );
           })}
         </div>
 
         {/* Right Actions: PWA Install + Sample Guide + Theme Toggle */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
           {pwaPrompt && (
             <motion.button
-              className="btn btn-primary"
+              className="btn btn-primary desktop-only"
               onClick={handleInstallPWA}
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               whileHover={{ y: -1 }}
               whileTap={{ scale: 0.96 }}
-              style={{ padding: '6px 12px', fontSize: 12, borderRadius: 'var(--radius-sm)', gap: 6 }}
+              style={{ padding: '5px 10px', fontSize: 11.5, borderRadius: 'var(--radius-sm)', gap: 5 }}
             >
-              <DownloadCloud size={13} /> Install App
+              <DownloadCloud size={12} /> Install
             </motion.button>
           )}
 
@@ -338,11 +348,13 @@ export default function App() {
             whileHover={{ y: -1 }}
             whileTap={{ scale: 0.96 }}
             style={{
-              padding: '6px 12px', fontSize: 12, borderRadius: 'var(--radius-sm)',
-              fontWeight: 500, gap: 6,
+              padding: '5px 10px', fontSize: 12, borderRadius: 'var(--radius-sm)',
+              fontWeight: 600, gap: 5,
             }}
           >
-            <Sparkles size={13} /> Sample Guide
+            <Sparkles size={12} />
+            <span className="desktop-only">Sample Guide</span>
+            <span className="mobile-only">Guide</span>
           </motion.button>
 
           <motion.button
@@ -352,12 +364,12 @@ export default function App() {
             whileTap={{ scale: 0.92 }}
             title={theme === 'dark' ? "Switch to Light Mode" : "Switch to Dark Mode"}
             style={{
-              padding: 7,
+              padding: 6,
               borderRadius: 'var(--radius-sm)',
               color: 'var(--text-secondary)',
             }}
           >
-            {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+            {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
           </motion.button>
         </div>
       </nav>
@@ -368,25 +380,28 @@ export default function App() {
         flex: 1,
         flexDirection: 'column',
         alignItems: 'center',
-        paddingTop: 88,
-        paddingLeft: 20,
-        paddingRight: 20,
+        paddingTop: 80,
+        paddingLeft: 16,
+        paddingRight: 16,
+        paddingBottom: 24,
         overflowY: 'auto',
         position: 'relative',
         zIndex: 2,
+        width: '100%',
+        maxWidth: '100vw',
       }}>
         <AnimatePresence mode="wait">
           {activeTab === 'reader' ? (
             <motion.div
               key="reader-view"
-              initial={{ opacity: 0, y: 14, scale: 0.99 }}
+              initial={{ opacity: 0, y: 12, scale: 0.99 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -14, scale: 0.99 }}
+              exit={{ opacity: 0, y: -12, scale: 0.99 }}
               transition={{ type: 'spring', stiffness: 360, damping: 28 }}
               style={{
                 display: 'flex', flexDirection: 'column', alignItems: 'center',
-                justifyContent: 'center', width: '100%', maxWidth: 540, marginTop: 'auto', marginBottom: 'auto',
-                paddingBottom: 40,
+                justifyContent: 'center', width: '100%', maxWidth: 520, marginTop: 'auto', marginBottom: 'auto',
+                paddingBottom: 32,
               }}
             >
               {/* Drop Card */}
@@ -397,7 +412,7 @@ export default function App() {
                 className="glass-panel"
                 style={{
                   width: '100%',
-                  padding: '40px 32px',
+                  padding: '38px 24px',
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
@@ -407,6 +422,7 @@ export default function App() {
                   cursor: 'pointer',
                   borderRadius: 'var(--radius-xl)',
                   transition: 'border-color 0.2s ease, background-color 0.2s ease',
+                  boxShadow: 'var(--shadow-lg)',
                 }}
                 onClick={() => fileInputRef.current?.click()}
               >
@@ -422,19 +438,19 @@ export default function App() {
                   animate={{ scale: isDragging ? 1.12 : 1, y: isDragging ? -4 : 0 }}
                   transition={{ type: 'spring', damping: 18 }}
                   style={{
-                    width: 56, height: 56, borderRadius: 18,
+                    width: 54, height: 54, borderRadius: 16,
                     background: 'var(--accent-soft)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    marginBottom: 16,
+                    marginBottom: 14,
                   }}
                 >
                   <UploadCloud size={26} color="var(--text-primary)" strokeWidth={1.8} />
                 </motion.div>
                 
-                <h2 style={{ fontSize: 19, fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>
+                <h2 style={{ fontSize: 18, fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--text-primary)', textAlign: 'center' }}>
                   {isDragging ? 'Release to open document' : 'Open a PDF document'}
                 </h2>
-                <p style={{ marginTop: 6, color: 'var(--text-secondary)', fontSize: 13, textAlign: 'center', lineHeight: 1.5 }}>
+                <p style={{ marginTop: 6, color: 'var(--text-secondary)', fontSize: 12.5, textAlign: 'center', lineHeight: 1.5, maxWidth: 360 }}>
                   Drop your PDF file here, or browse from your computer.
                 </p>
 
@@ -447,34 +463,34 @@ export default function App() {
                     handleOpenDemoDoc();
                   }}
                   style={{
-                    marginTop: 22,
-                    padding: '9px 18px',
+                    marginTop: 20,
+                    padding: '8px 16px',
                     borderRadius: 'var(--radius-md)',
                     background: 'var(--surface-card)',
                     border: '1px solid var(--glass-border)',
                     boxShadow: 'var(--shadow-sm)',
-                    display: 'flex', alignItems: 'center', gap: 8,
+                    display: 'flex', alignItems: 'center', gap: 7,
                     cursor: 'pointer',
                   }}
                 >
-                  <Sparkles size={14} color="var(--text-primary)" />
-                  <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text-primary)' }}>
+                  <Sparkles size={13} color="var(--text-primary)" />
+                  <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>
                     Explore Sample Guide Document
                   </span>
-                  <ArrowRight size={13} color="var(--text-secondary)" />
+                  <ArrowRight size={12} color="var(--text-secondary)" />
                 </motion.div>
                 
-                <div style={{ marginTop: 24, display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--text-tertiary)' }}>
-                  <ShieldCheck size={13} /> Client-Side Processing • Your files never leave your device
+                <div style={{ marginTop: 22, display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--text-tertiary)', textAlign: 'center' }}>
+                  <ShieldCheck size={12} /> Client-Side Privacy • In-Memory Processing by Alpine Foundations
                 </div>
               </motion.div>
 
               {/* ── Recent Documents Section ── */}
               {recentFiles.length > 0 && (
-                <div style={{ width: '100%', marginTop: 24 }}>
+                <div style={{ width: '100%', marginTop: 20 }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, padding: '0 4px' }}>
-                    <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <Clock size={12} /> Recent Documents
+                    <span style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'flex', alignItems: 'center', gap: 5 }}>
+                      <Clock size={11} /> Recent Documents
                     </span>
                     <button
                       className="btn"
@@ -495,7 +511,7 @@ export default function App() {
                         onClick={() => fileInputRef.current?.click()}
                         className="glass-panel"
                         style={{
-                          padding: '9px 14px',
+                          padding: '9px 12px',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'space-between',
@@ -505,13 +521,13 @@ export default function App() {
                           boxShadow: 'var(--shadow-sm)',
                         }}
                       >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, overflow: 'hidden' }}>
-                          <File size={15} color="var(--text-secondary)" />
-                          <span style={{ fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, overflow: 'hidden' }}>
+                          <File size={14} color="var(--text-secondary)" />
+                          <span style={{ fontSize: 12.5, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             {rf.name}
                           </span>
                         </div>
-                        <span style={{ fontSize: 11, color: 'var(--text-tertiary)', whiteSpace: 'nowrap', marginLeft: 12 }}>
+                        <span style={{ fontSize: 10.5, color: 'var(--text-tertiary)', whiteSpace: 'nowrap', marginLeft: 10 }}>
                           {formatBytes(rf.size)}
                         </span>
                       </motion.div>
@@ -523,9 +539,9 @@ export default function App() {
           ) : (
             <motion.div
               key="tools-view"
-              initial={{ opacity: 0, y: 14, scale: 0.99 }}
+              initial={{ opacity: 0, y: 12, scale: 0.99 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -14, scale: 0.99 }}
+              exit={{ opacity: 0, y: -12, scale: 0.99 }}
               transition={{ type: 'spring', stiffness: 360, damping: 28 }}
               style={{ width: '100%', maxWidth: 1040, paddingBottom: 60 }}
             >

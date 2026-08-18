@@ -1297,440 +1297,508 @@ export default function PDFViewer({
       </AnimatePresence>
 
       {/* ── Floating Top Navbar ── */}
+      {/* ── Floating Top Navbar (Zero Overflow Responsive) ── */}
       <motion.nav
         initial={{ y: -70, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ type: 'spring', damping: 26, stiffness: 220 }}
         className="glass-panel"
         style={{
-          position: 'fixed', top: 12, left: 16, right: 16,
-          height: 52, display: 'flex', alignItems: 'center',
-          justifyContent: 'space-between', padding: '0 14px', zIndex: 100,
+          position: 'fixed', top: isMobile ? 8 : 12, left: isMobile ? 8 : 16, right: isMobile ? 8 : 16,
+          height: 50, display: 'flex', alignItems: 'center',
+          justifyContent: 'space-between', padding: isMobile ? '0 10px' : '0 14px', zIndex: 100,
           borderRadius: 'var(--radius-lg)',
         }}
       >
-        {/* Left Controls */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <img 
-            src="./favicon.png" 
-            alt="MyOxia" 
-            style={{ width: 22, height: 22, borderRadius: 6, objectFit: 'contain', background: 'var(--accent-soft)', padding: 1 }} 
-          />
-          <motion.button
-            className="btn"
-            onClick={onClose}
-            whileTap={{ scale: 0.94 }}
-            title="Close Document"
-            style={{ padding: 5, borderRadius: 'var(--radius-sm)' }}
-          >
-            <X size={16} color="var(--text-secondary)" />
-          </motion.button>
-          <div style={{ width: 1, height: 16, background: 'var(--glass-border)' }} />
-
-          {/* Sidebar toggle */}
-          <motion.button
-            className="btn"
-            onClick={() => setShowSidebar(v => !v)}
-            title="Toggle Sidebar (S)"
-            whileTap={{ scale: 0.92 }}
-            style={{
-              padding: 5,
-              background: showSidebar ? 'var(--accent-soft)' : 'transparent',
-              borderRadius: 'var(--radius-sm)',
-            }}
-          >
-            <LayoutList size={16} color="var(--text-primary)" />
-          </motion.button>
-
-          {/* Undo / Redo buttons */}
-          <motion.button
-            className="btn"
-            disabled={history.length === 0}
-            onClick={handleUndo}
-            whileTap={{ scale: 0.92 }}
-            title="Undo last action (Ctrl+Z)"
-            style={{ padding: 5, opacity: history.length > 0 ? 1 : 0.35, borderRadius: 'var(--radius-sm)' }}
-          >
-            <Undo2 size={15} />
-          </motion.button>
-          <motion.button
-            className="btn"
-            disabled={future.length === 0}
-            onClick={handleRedo}
-            whileTap={{ scale: 0.92 }}
-            title="Redo action (Ctrl+Y / Ctrl+Shift+Z)"
-            style={{ padding: 5, opacity: future.length > 0 ? 1 : 0.35, borderRadius: 'var(--radius-sm)' }}
-          >
-            <Redo2 size={15} />
-          </motion.button>
-
-          <div style={{ width: 1, height: 16, background: 'var(--glass-border)' }} />
-
-          {/* Document Title with Pencil Rename Support */}
-          {isRenamingDoc ? (
-            <input
-              ref={renameInputRef}
-              type="text"
-              value={customDocName}
-              onChange={e => setCustomDocName(e.target.value)}
-              onBlur={() => setIsRenamingDoc(false)}
-              onKeyDown={e => {
-                if (e.key === 'Enter' || e.key === 'Escape') {
-                  recordSnapshot();
-                  setIsRenamingDoc(false);
-                }
-              }}
-              className="doc-title-input"
-              style={{ width: 160 }}
-            />
-          ) : (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        {isMobile ? (
+          /* Mobile Simplified Top Header */
+          <>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, overflow: 'hidden' }}>
+              <img 
+                src="./favicon.png" 
+                alt="MyOx" 
+                style={{ width: 22, height: 22, borderRadius: 6, objectFit: 'contain', background: 'var(--accent-soft)', padding: 1, flexShrink: 0 }} 
+              />
+              <motion.button
+                className="btn"
+                onClick={onClose}
+                whileTap={{ scale: 0.94 }}
+                title="Close Document"
+                style={{ padding: 4, borderRadius: 'var(--radius-sm)', flexShrink: 0 }}
+              >
+                <X size={15} color="var(--text-secondary)" />
+              </motion.button>
+              <div style={{ width: 1, height: 14, background: 'var(--glass-border)', flexShrink: 0 }} />
               <span
-                onDoubleClick={() => setIsRenamingDoc(true)}
-                title="Double click or click pencil to rename"
                 style={{
-                  fontSize: 13, fontWeight: 600,
-                  maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                  cursor: 'pointer',
+                  fontSize: 12.5, fontWeight: 700,
+                  maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                  color: 'var(--text-primary)',
                 }}
               >
                 {customDocName}
               </span>
-              <button
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+              <motion.button
                 className="btn"
-                onClick={() => setIsRenamingDoc(true)}
-                title="Rename PDF"
-                style={{ padding: 3 }}
+                onClick={() => {
+                  setShowSidebar(true);
+                  setSidebarTab('search');
+                }}
+                whileTap={{ scale: 0.92 }}
+                title="Search Document"
+                style={{ padding: 6, borderRadius: 'var(--radius-sm)' }}
               >
-                <Pencil size={13} color="var(--text-secondary)" />
-              </button>
-            </div>
-          )}
-
-          {numPages && (
-            <span style={{ fontSize: 12, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
-              — {numPages}p
-            </span>
-          )}
-        </div>
-
-        {/* Center / Navigation & Markup Controls */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          {numPages && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 2, background: 'var(--bg-subtle)', padding: '2px 6px', borderRadius: 'var(--radius-sm)' }}>
-              <motion.button whileTap={{ scale: 0.9 }} className="btn" onClick={() => scrollToPage(currentPage - 1)} style={{ padding: 3 }} title="Previous Page (PgUp)">
-                <ChevronUp size={14} color="var(--text-secondary)" />
+                <Search size={15} color="var(--text-secondary)" />
               </motion.button>
-              <span style={{ fontSize: 12, minWidth: 52, textAlign: 'center', fontVariantNumeric: 'tabular-nums', fontWeight: 500 }}>
-                {currentPage} / {numPages}
-              </span>
-              <motion.button whileTap={{ scale: 0.9 }} className="btn" onClick={() => scrollToPage(currentPage + 1)} style={{ padding: 3 }} title="Next Page (PgDn)">
-                <ChevronDown size={14} color="var(--text-secondary)" />
+
+              <motion.button
+                className="btn"
+                onClick={handleToggleDarkMode}
+                whileTap={{ scale: 0.92 }}
+                title="Toggle Theme"
+                style={{ padding: 6, borderRadius: 'var(--radius-sm)' }}
+              >
+                {isDarkMode ? <Sun size={15} color="var(--text-secondary)" /> : <Moon size={15} color="var(--text-secondary)" />}
+              </motion.button>
+
+              <motion.button
+                className="btn btn-primary"
+                onClick={handleDownload}
+                whileTap={{ scale: 0.95 }}
+                title="Download PDF"
+                style={{ padding: '5px 9px', borderRadius: 'var(--radius-sm)', gap: 4, fontSize: 12 }}
+              >
+                <Download size={13} />
               </motion.button>
             </div>
-          )}
+          </>
+        ) : (
+          /* Desktop Full Power Studio Navbar */
+          <>
+            {/* Left Controls */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <img 
+                src="./favicon.png" 
+                alt="MyOx" 
+                style={{ width: 22, height: 22, borderRadius: 6, objectFit: 'contain', background: 'var(--accent-soft)', padding: 1 }} 
+              />
+              <motion.button
+                className="btn"
+                onClick={onClose}
+                whileTap={{ scale: 0.94 }}
+                title="Close Document"
+                style={{ padding: 5, borderRadius: 'var(--radius-sm)' }}
+              >
+                <X size={16} color="var(--text-secondary)" />
+              </motion.button>
+              <div style={{ width: 1, height: 16, background: 'var(--glass-border)' }} />
 
-          {/* Annotate & Markup Toggle */}
-          <motion.button
-            className="btn"
-            whileTap={{ scale: 0.95 }}
-            onClick={() => {
-              setIsAnnotateMode(v => !v);
-              if (!isAnnotateMode) setActiveAnnotateTool('pen');
-              else setActiveAnnotateTool(null);
-            }}
-            title="Edit & Annotate PDF (Draw, Text Blocks, Shapes, Comments)"
-            style={{
-              padding: '5px 10px', borderRadius: 'var(--radius-sm)', fontSize: 12, gap: 5,
-              background: isAnnotateMode ? 'var(--accent)' : 'transparent',
-              color: isAnnotateMode ? 'var(--bg-color)' : 'var(--text-primary)',
-              border: isAnnotateMode ? '1px solid var(--accent)' : '1px solid var(--glass-border)',
-              fontWeight: 500,
-            }}
-          >
-            <Edit3 size={13} /> Annotate
-          </motion.button>
-        </div>
+              {/* Sidebar toggle */}
+              <motion.button
+                className="btn"
+                onClick={() => setShowSidebar(v => !v)}
+                title="Toggle Sidebar (S)"
+                whileTap={{ scale: 0.92 }}
+                style={{
+                  padding: 5,
+                  background: showSidebar ? 'var(--accent-soft)' : 'transparent',
+                  borderRadius: 'var(--radius-sm)',
+                }}
+              >
+                <LayoutList size={16} color="var(--text-primary)" />
+              </motion.button>
 
-        {/* Right Tools */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-          
-          {/* ── Search Bar with Clean Champagne Highlight ── */}
-          <div style={{
-            position: 'relative', display: 'flex', alignItems: 'center',
-            background: 'var(--surface-card)', border: '1px solid var(--glass-border)',
-            borderRadius: 'var(--radius-sm)', padding: '2px 6px 2px 26px',
-            boxShadow: 'var(--shadow-sm)',
-          }}>
-            <Search size={13} color="var(--text-tertiary)"
-              style={{ position: 'absolute', left: 8, pointerEvents: 'none' }} />
-            
-            <input
-              ref={searchInputRef}
-              type="text"
-              placeholder="Search doc…"
-              value={searchQuery}
-              onFocus={e => e.target.select()}
-              onChange={e => setSearchQuery(e.target.value)}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                color: 'var(--text-primary)',
-                fontSize: 12, outline: 'none',
-                width: searchQuery ? 120 : 96,
-                padding: '4px 0',
-                transition: 'width 0.2s ease',
-              }}
-            />
+              {/* Undo / Redo buttons */}
+              <motion.button
+                className="btn"
+                disabled={history.length === 0}
+                onClick={handleUndo}
+                whileTap={{ scale: 0.92 }}
+                title="Undo last action (Ctrl+Z)"
+                style={{ padding: 5, opacity: history.length > 0 ? 1 : 0.35, borderRadius: 'var(--radius-sm)' }}
+              >
+                <Undo2 size={15} />
+              </motion.button>
+              <motion.button
+                className="btn"
+                disabled={future.length === 0}
+                onClick={handleRedo}
+                whileTap={{ scale: 0.92 }}
+                title="Redo action (Ctrl+Y / Ctrl+Shift+Z)"
+                style={{ padding: 5, opacity: future.length > 0 ? 1 : 0.35, borderRadius: 'var(--radius-sm)' }}
+              >
+                <Redo2 size={15} />
+              </motion.button>
 
-            {/* Match Counter & Next/Prev Controls */}
-            {searchQuery && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 2, marginLeft: 4 }}>
-                <span style={{
-                  fontSize: 11, color: searchResults.length > 0 ? 'var(--text-secondary)' : '#ef4444',
-                  fontWeight: 500, minWidth: 32, textAlign: 'center',
-                }}>
-                  {isSearching ? '…' : searchResults.length > 0 ? `${activeMatchIndex + 1}/${searchResults.length}` : '0/0'}
-                </span>
+              <div style={{ width: 1, height: 16, background: 'var(--glass-border)' }} />
 
-                <motion.button
-                  whileTap={{ scale: 0.88 }}
-                  className="btn"
-                  onClick={handlePrevMatch}
-                  title="Previous match (Shift+Enter)"
-                  disabled={searchResults.length === 0}
-                  style={{ padding: 2, opacity: searchResults.length > 0 ? 1 : 0.4 }}
-                >
-                  <ChevronUp size={13} color="var(--text-secondary)" />
-                </motion.button>
-
-                <motion.button
-                  whileTap={{ scale: 0.88 }}
-                  className="btn"
-                  onClick={handleNextMatch}
-                  title="Next match (Enter)"
-                  disabled={searchResults.length === 0}
-                  style={{ padding: 2, opacity: searchResults.length > 0 ? 1 : 0.4 }}
-                >
-                  <ChevronDown size={13} color="var(--text-secondary)" />
-                </motion.button>
-
-                <button
-                  className="btn"
-                  onClick={() => setSearchQuery('')}
-                  title="Clear search"
-                  style={{ padding: 2 }}
-                >
-                  <X size={12} color="var(--text-secondary)" />
-                </button>
-              </div>
-            )}
-          </div>
-
-          <div style={{ width: 1, height: 16, background: 'var(--glass-border)' }} />
-
-          {/* Share PDF Button */}
-          <motion.button
-            whileTap={{ scale: 0.92 }}
-            className="btn"
-            onClick={() => setActiveViewerTool('share')}
-            title="Share Document"
-            style={{ padding: 5, borderRadius: 'var(--radius-sm)' }}
-          >
-            <Share2 size={15} color="var(--text-secondary)" />
-          </motion.button>
-
-          {/* ── Power Tools Dropdown Trigger ── */}
-          <div ref={toolsMenuRef} style={{ position: 'relative' }}>
-            <motion.button
-              className="btn btn-soft"
-              whileTap={{ scale: 0.95 }}
-              onClick={() => setShowToolsMenu(v => !v)}
-              title="All PDF Power Tools"
-              style={{
-                padding: '5px 10px',
-                borderRadius: 'var(--radius-sm)',
-                fontSize: 12,
-                fontWeight: 500,
-                gap: 5,
-              }}
-            >
-              <Wand2 size={13} /> Tools
-            </motion.button>
-
-            {/* In-Viewer Tools Menu Flyout */}
-            <AnimatePresence>
-              {showToolsMenu && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.96, y: 6 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.96, y: 6 }}
-                  transition={{ type: 'spring', stiffness: 400, damping: 28 }}
-                  className="glass-panel"
-                  style={{
-                    position: 'absolute', right: 0, top: 38, width: 220,
-                    borderRadius: 'var(--radius-md)', padding: 5, zIndex: 200,
-                    background: 'var(--surface-card)', border: '1px solid var(--glass-border)',
-                    boxShadow: 'var(--shadow-lg)',
-                    display: 'flex', flexDirection: 'column', gap: 2,
+              {/* Document Title with Pencil Rename Support */}
+              {isRenamingDoc ? (
+                <input
+                  ref={renameInputRef}
+                  type="text"
+                  value={customDocName}
+                  onChange={e => setCustomDocName(e.target.value)}
+                  onBlur={() => setIsRenamingDoc(false)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' || e.key === 'Escape') {
+                      recordSnapshot();
+                      setIsRenamingDoc(false);
+                    }
                   }}
-                >
-                  {[
-                    { id: 'compress', label: 'Compress PDF', icon: Minimize2, color: '#0d9488' },
-                    { id: 'organize', label: 'Organize Pages', icon: LayoutGrid, color: '#059669' },
-                    { id: 'split', label: 'Split / Extract', icon: Scissors, color: '#dc2626' },
-                    { id: 'signature', label: 'E-Sign Signature', icon: PenTool, color: '#7c3aed' },
-                    { id: 'watermark', label: 'Watermark & Tint', icon: Stamp, color: '#d97706' },
-                    { id: 'numbering', label: 'Page Numbers', icon: Hash, color: '#4f46e5' },
-                    { id: 'share', label: 'Share PDF', icon: Share2, color: '#2563eb' },
-                    { id: 'pdf-to-img', label: 'Export Images ZIP', icon: FileImage, color: '#0891b2' },
-                    { id: 'sanitize', label: 'Sanitize Metadata', icon: ShieldAlert, color: '#d97706' },
-                  ].map(item => {
-                    const Icon = item.icon;
-                    return (
-                      <motion.button
-                        key={item.id}
-                        whileHover={{ x: 2 }}
-                        className="btn"
-                        onClick={() => { setActiveViewerTool(item.id); setShowToolsMenu(false); }}
-                        style={{
-                          justifyContent: 'flex-start', padding: '7px 10px', fontSize: 12, gap: 8,
-                          borderRadius: 'var(--radius-sm)',
-                        }}
-                      >
-                        <div style={{
-                          width: 24, height: 24, borderRadius: 6,
-                          background: 'var(--accent-soft)',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          color: 'var(--text-primary)',
-                        }}>
-                          <Icon size={13} />
-                        </div>
-                        {item.label}
-                      </motion.button>
-                    );
-                  })}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-
-          <div style={{ width: 1, height: 16, background: 'var(--glass-border)' }} />
-
-          {/* Zoom Controls */}
-          <motion.button whileTap={{ scale: 0.9 }} className="btn" onClick={zoomOut} title="Zoom out (-)" style={{ padding: 4 }}>
-            <ZoomOut size={14} color="var(--text-secondary)" />
-          </motion.button>
-          <span style={{ fontSize: 11, minWidth: 32, textAlign: 'center', color: 'var(--text-secondary)', fontVariantNumeric: 'tabular-nums' }}>
-            {Math.round(scale * 100)}%
-          </span>
-          <motion.button whileTap={{ scale: 0.9 }} className="btn" onClick={zoomIn} title="Zoom in (+)" style={{ padding: 4 }}>
-            <ZoomIn size={14} color="var(--text-secondary)" />
-          </motion.button>
-
-          {/* Two-page Spread Switcher */}
-          <motion.button
-            whileTap={{ scale: 0.9 }}
-            className="btn"
-            onClick={() => setViewMode(v => v === 'single' ? 'two-page' : 'single')}
-            title={viewMode === 'two-page' ? 'Single page view' : 'Two-page spread view'}
-            style={{
-              padding: 5,
-              background: viewMode === 'two-page' ? 'var(--accent-soft)' : 'transparent',
-              color: 'var(--text-primary)',
-              borderRadius: 'var(--radius-sm)',
-            }}
-          >
-            <BookOpen size={14} />
-          </motion.button>
-
-          {/* Rotate Clockwise */}
-          <motion.button whileTap={{ scale: 0.9 }} className="btn" onClick={rotate} title="Rotate 90° (R)" style={{ padding: 4 }}>
-            <RotateCw size={14} color="var(--text-secondary)" />
-          </motion.button>
-
-          {/* Reading Paper Shader Switcher */}
-          <div style={{ position: 'relative' }}>
-            <motion.button
-              whileTap={{ scale: 0.92 }}
-              className="btn"
-              onClick={() => setShowReadingMenu(v => !v)}
-              title="Page Reading Tone (Eye-Care Sepia, Mint, Night)"
-              style={{
-                padding: 5,
-                background: readingShader !== 'paper' ? 'var(--accent-soft)' : 'transparent',
-                borderRadius: 'var(--radius-sm)',
-              }}
-            >
-              <Eye size={14} color="var(--text-secondary)" />
-            </motion.button>
-
-            <AnimatePresence>
-              {showReadingMenu && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.96, y: 6 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.96, y: 6 }}
-                  transition={{ type: 'spring', stiffness: 400, damping: 28 }}
-                  className="glass-panel"
-                  style={{
-                    position: 'absolute', right: -10, top: 36, width: 190,
-                    borderRadius: 'var(--radius-md)', padding: 5, zIndex: 200,
-                    background: 'var(--surface-card)', border: '1px solid var(--glass-border)',
-                    boxShadow: 'var(--shadow-lg)',
-                    display: 'flex', flexDirection: 'column', gap: 2,
-                  }}
-                >
-                  <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-tertiary)', padding: '4px 8px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                    Paper Shader:
+                  className="doc-title-input"
+                  style={{ width: 160 }}
+                />
+              ) : (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span
+                    onDoubleClick={() => setIsRenamingDoc(true)}
+                    title="Double click or click pencil to rename"
+                    style={{
+                      fontSize: 13, fontWeight: 600,
+                      maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {customDocName}
                   </span>
-                  {[
-                    { id: 'paper', label: '☀️ Natural Paper' },
-                    { id: 'sepia', label: '📖 Warm Sepia' },
-                    { id: 'mint', label: '🌿 Soft Mint Tone' },
-                    { id: 'slate', label: '🌫️ Cool Slate' },
-                    { id: 'inverted', label: '🌙 Night Inverted' },
-                  ].map(s => (
-                    <button
-                      key={s.id}
+                  <button
+                    className="btn"
+                    onClick={() => setIsRenamingDoc(true)}
+                    title="Rename PDF"
+                    style={{ padding: 3 }}
+                  >
+                    <Pencil size={13} color="var(--text-secondary)" />
+                  </button>
+                </div>
+              )}
+
+              {numPages && (
+                <span style={{ fontSize: 12, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                  — {numPages}p
+                </span>
+              )}
+            </div>
+
+            {/* Center / Navigation & Markup Controls */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              {numPages && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 2, background: 'var(--bg-subtle)', padding: '2px 6px', borderRadius: 'var(--radius-sm)' }}>
+                  <motion.button whileTap={{ scale: 0.9 }} className="btn" onClick={() => scrollToPage(currentPage - 1)} style={{ padding: 3 }} title="Previous Page (PgUp)">
+                    <ChevronUp size={14} color="var(--text-secondary)" />
+                  </motion.button>
+                  <span style={{ fontSize: 12, minWidth: 52, textAlign: 'center', fontVariantNumeric: 'tabular-nums', fontWeight: 500 }}>
+                    {currentPage} / {numPages}
+                  </span>
+                  <motion.button whileTap={{ scale: 0.9 }} className="btn" onClick={() => scrollToPage(currentPage + 1)} style={{ padding: 3 }} title="Next Page (PgDn)">
+                    <ChevronDown size={14} color="var(--text-secondary)" />
+                  </motion.button>
+                </div>
+              )}
+
+              {/* Annotate & Markup Toggle */}
+              <motion.button
+                className="btn"
+                whileTap={{ scale: 0.95 }}
+                onClick={() => {
+                  setIsAnnotateMode(v => !v);
+                  if (!isAnnotateMode) setActiveAnnotateTool('pen');
+                  else setActiveAnnotateTool(null);
+                }}
+                title="Edit & Annotate PDF (Draw, Text Blocks, Shapes, Comments)"
+                style={{
+                  padding: '5px 10px', borderRadius: 'var(--radius-sm)', fontSize: 12, gap: 5,
+                  background: isAnnotateMode ? 'var(--accent)' : 'transparent',
+                  color: isAnnotateMode ? 'var(--bg-color)' : 'var(--text-primary)',
+                  border: isAnnotateMode ? '1px solid var(--accent)' : '1px solid var(--glass-border)',
+                  fontWeight: 500,
+                }}
+              >
+                <Edit3 size={13} /> Annotate
+              </motion.button>
+            </div>
+
+            {/* Right Tools */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+              {/* Search Bar */}
+              <div style={{
+                position: 'relative', display: 'flex', alignItems: 'center',
+                background: 'var(--surface-card)', border: '1px solid var(--glass-border)',
+                borderRadius: 'var(--radius-sm)', padding: '2px 6px 2px 26px',
+                boxShadow: 'var(--shadow-sm)',
+              }}>
+                <Search size={13} color="var(--text-tertiary)"
+                  style={{ position: 'absolute', left: 8, pointerEvents: 'none' }} />
+                
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  placeholder="Search doc…"
+                  value={searchQuery}
+                  onFocus={e => e.target.select()}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    color: 'var(--text-primary)',
+                    fontSize: 12, outline: 'none',
+                    width: searchQuery ? 120 : 96,
+                    padding: '4px 0',
+                    transition: 'width 0.2s ease',
+                  }}
+                />
+
+                {searchQuery && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 2, marginLeft: 4 }}>
+                    <span style={{
+                      fontSize: 11, color: searchResults.length > 0 ? 'var(--text-secondary)' : '#ef4444',
+                      fontWeight: 500, minWidth: 32, textAlign: 'center',
+                    }}>
+                      {isSearching ? '…' : searchResults.length > 0 ? `${activeMatchIndex + 1}/${searchResults.length}` : '0/0'}
+                    </span>
+
+                    <motion.button
+                      whileTap={{ scale: 0.88 }}
                       className="btn"
-                      onClick={() => { setReadingShader(s.id); setShowReadingMenu(false); }}
+                      onClick={handlePrevMatch}
+                      title="Previous match (Shift+Enter)"
+                      disabled={searchResults.length === 0}
+                      style={{ padding: 2, opacity: searchResults.length > 0 ? 1 : 0.4 }}
+                    >
+                      <ChevronUp size={13} color="var(--text-secondary)" />
+                    </motion.button>
+
+                    <motion.button
+                      whileTap={{ scale: 0.88 }}
+                      className="btn"
+                      onClick={handleNextMatch}
+                      title="Next match (Enter)"
+                      disabled={searchResults.length === 0}
+                      style={{ padding: 2, opacity: searchResults.length > 0 ? 1 : 0.4 }}
+                    >
+                      <ChevronDown size={13} color="var(--text-secondary)" />
+                    </motion.button>
+
+                    <button
+                      className="btn"
+                      onClick={() => setSearchQuery('')}
+                      title="Clear search"
+                      style={{ padding: 2 }}
+                    >
+                      <X size={12} color="var(--text-secondary)" />
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <div style={{ width: 1, height: 16, background: 'var(--glass-border)' }} />
+
+              {/* Share PDF Button */}
+              <motion.button
+                whileTap={{ scale: 0.92 }}
+                className="btn"
+                onClick={() => setActiveViewerTool('share')}
+                title="Share Document"
+                style={{ padding: 5, borderRadius: 'var(--radius-sm)' }}
+              >
+                <Share2 size={15} color="var(--text-secondary)" />
+              </motion.button>
+
+              {/* Power Tools Dropdown */}
+              <div ref={toolsMenuRef} style={{ position: 'relative' }}>
+                <motion.button
+                  className="btn btn-soft"
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setShowToolsMenu(v => !v)}
+                  title="All PDF Power Tools"
+                  style={{
+                    padding: '5px 10px',
+                    borderRadius: 'var(--radius-sm)',
+                    fontSize: 12,
+                    fontWeight: 500,
+                    gap: 5,
+                  }}
+                >
+                  <Wand2 size={13} /> Tools
+                </motion.button>
+
+                <AnimatePresence>
+                  {showToolsMenu && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.96, y: 6 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.96, y: 6 }}
+                      transition={{ type: 'spring', stiffness: 400, damping: 28 }}
+                      className="glass-panel"
                       style={{
-                        justifyContent: 'flex-start', padding: '5px 8px', fontSize: 12, borderRadius: 'var(--radius-xs)',
-                        background: readingShader === s.id ? 'var(--accent-soft)' : 'transparent',
-                        fontWeight: readingShader === s.id ? 600 : 400,
+                        position: 'absolute', right: 0, top: 38, width: 220,
+                        borderRadius: 'var(--radius-md)', padding: 5, zIndex: 200,
+                        background: 'var(--surface-card)', border: '1px solid var(--glass-border)',
+                        boxShadow: 'var(--shadow-lg)',
+                        display: 'flex', flexDirection: 'column', gap: 2,
                       }}
                     >
-                      {s.label}
-                    </button>
-                  ))}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
+                      {[
+                        { id: 'compress', label: 'Compress PDF', icon: Minimize2, color: '#0d9488' },
+                        { id: 'organize', label: 'Organize Pages', icon: LayoutGrid, color: '#059669' },
+                        { id: 'split', label: 'Split / Extract', icon: Scissors, color: '#dc2626' },
+                        { id: 'signature', label: 'E-Sign Signature', icon: PenTool, color: '#7c3aed' },
+                        { id: 'watermark', label: 'Watermark & Tint', icon: Stamp, color: '#d97706' },
+                        { id: 'numbering', label: 'Page Numbers', icon: Hash, color: '#4f46e5' },
+                        { id: 'share', label: 'Share PDF', icon: Share2, color: '#2563eb' },
+                        { id: 'pdf-to-img', label: 'Export Images ZIP', icon: FileImage, color: '#0891b2' },
+                        { id: 'sanitize', label: 'Sanitize Metadata', icon: ShieldAlert, color: '#d97706' },
+                      ].map(item => {
+                        const Icon = item.icon;
+                        return (
+                          <motion.button
+                            key={item.id}
+                            whileHover={{ x: 2 }}
+                            className="btn"
+                            onClick={() => { setActiveViewerTool(item.id); setShowToolsMenu(false); }}
+                            style={{
+                              justifyContent: 'flex-start', padding: '7px 10px', fontSize: 12, gap: 8,
+                              borderRadius: 'var(--radius-sm)',
+                            }}
+                          >
+                            <div style={{
+                              width: 24, height: 24, borderRadius: 6,
+                              background: 'var(--accent-soft)',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              color: 'var(--text-primary)',
+                            }}>
+                              <Icon size={13} />
+                            </div>
+                            {item.label}
+                          </motion.button>
+                        );
+                      })}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
 
-          {/* App Dark / Light Mode Toggle */}
-          <motion.button whileTap={{ scale: 0.9 }} className="btn" onClick={handleToggleDarkMode} title="Toggle App Theme" style={{ padding: 4 }}>
-            {isDarkMode ? <Sun size={14} color="var(--text-secondary)" /> : <Moon size={14} color="var(--text-secondary)" />}
-          </motion.button>
+              <div style={{ width: 1, height: 16, background: 'var(--glass-border)' }} />
 
-          {/* Fullscreen */}
-          <motion.button whileTap={{ scale: 0.9 }} className="btn" onClick={toggleFullscreen} title="Fullscreen (F11)" style={{ padding: 4 }}>
-            {isFullscreen ? <Minimize size={14} color="var(--text-secondary)" /> : <Maximize size={14} color="var(--text-secondary)" />}
-          </motion.button>
+              {/* Zoom Controls */}
+              <motion.button whileTap={{ scale: 0.9 }} className="btn" onClick={zoomOut} title="Zoom out (-)" style={{ padding: 4 }}>
+                <ZoomOut size={14} color="var(--text-secondary)" />
+              </motion.button>
+              <span style={{ fontSize: 11, minWidth: 32, textAlign: 'center', color: 'var(--text-secondary)', fontVariantNumeric: 'tabular-nums' }}>
+                {Math.round(scale * 100)}%
+              </span>
+              <motion.button whileTap={{ scale: 0.9 }} className="btn" onClick={zoomIn} title="Zoom in (+)" style={{ padding: 4 }}>
+                <ZoomIn size={14} color="var(--text-secondary)" />
+              </motion.button>
 
-          {/* Download */}
-          <motion.button
-            className="btn btn-primary"
-            whileHover={{ y: -1 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={handleDownload}
-            title="Download PDF"
-            style={{ padding: '5px 11px', fontSize: 12, gap: 5, borderRadius: 'var(--radius-sm)' }}
-          >
-            <Download size={13} /> Download
-          </motion.button>
-        </div>
+              {/* Two-page Spread Switcher */}
+              <motion.button
+                whileTap={{ scale: 0.9 }}
+                className="btn"
+                onClick={() => setViewMode(v => v === 'single' ? 'two-page' : 'single')}
+                title={viewMode === 'two-page' ? 'Single page view' : 'Two-page spread view'}
+                style={{
+                  padding: 5,
+                  background: viewMode === 'two-page' ? 'var(--accent-soft)' : 'transparent',
+                  color: 'var(--text-primary)',
+                  borderRadius: 'var(--radius-sm)',
+                }}
+              >
+                <BookOpen size={14} />
+              </motion.button>
+
+              {/* Rotate */}
+              <motion.button whileTap={{ scale: 0.9 }} className="btn" onClick={rotate} title="Rotate 90° (R)" style={{ padding: 4 }}>
+                <RotateCw size={14} color="var(--text-secondary)" />
+              </motion.button>
+
+              {/* Reading Paper Shader Switcher */}
+              <div style={{ position: 'relative' }}>
+                <motion.button
+                  whileTap={{ scale: 0.92 }}
+                  className="btn"
+                  onClick={() => setShowReadingMenu(v => !v)}
+                  title="Page Reading Tone (Eye-Care Sepia, Mint, Night)"
+                  style={{
+                    padding: 5,
+                    background: readingShader !== 'paper' ? 'var(--accent-soft)' : 'transparent',
+                    borderRadius: 'var(--radius-sm)',
+                  }}
+                >
+                  <Eye size={14} color="var(--text-secondary)" />
+                </motion.button>
+
+                <AnimatePresence>
+                  {showReadingMenu && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.96, y: 6 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.96, y: 6 }}
+                      transition={{ type: 'spring', stiffness: 400, damping: 28 }}
+                      className="glass-panel"
+                      style={{
+                        position: 'absolute', right: -10, top: 36, width: 190,
+                        borderRadius: 'var(--radius-md)', padding: 5, zIndex: 200,
+                        background: 'var(--surface-card)', border: '1px solid var(--glass-border)',
+                        boxShadow: 'var(--shadow-lg)',
+                        display: 'flex', flexDirection: 'column', gap: 2,
+                      }}
+                    >
+                      <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-tertiary)', padding: '4px 8px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                        Paper Shader:
+                      </span>
+                      {[
+                        { id: 'paper', label: '☀️ Natural Paper' },
+                        { id: 'sepia', label: '📖 Warm Sepia' },
+                        { id: 'mint', label: '🌿 Soft Mint Tone' },
+                        { id: 'slate', label: '🌫️ Cool Slate' },
+                        { id: 'inverted', label: '🌙 Night Inverted' },
+                      ].map(s => (
+                        <button
+                          key={s.id}
+                          className="btn"
+                          onClick={() => { setReadingShader(s.id); setShowReadingMenu(false); }}
+                          style={{
+                            justifyContent: 'flex-start', padding: '5px 8px', fontSize: 12, borderRadius: 'var(--radius-xs)',
+                            background: readingShader === s.id ? 'var(--accent-soft)' : 'transparent',
+                            fontWeight: readingShader === s.id ? 600 : 400,
+                          }}
+                        >
+                          {s.label}
+                        </button>
+                      ))}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
+              {/* Theme */}
+              <motion.button whileTap={{ scale: 0.9 }} className="btn" onClick={handleToggleDarkMode} title="Toggle App Theme" style={{ padding: 4 }}>
+                {isDarkMode ? <Sun size={14} color="var(--text-secondary)" /> : <Moon size={14} color="var(--text-secondary)" />}
+              </motion.button>
+
+              {/* Fullscreen */}
+              <motion.button whileTap={{ scale: 0.9 }} className="btn" onClick={toggleFullscreen} title="Fullscreen (F11)" style={{ padding: 4 }}>
+                {isFullscreen ? <Minimize size={14} color="var(--text-secondary)" /> : <Maximize size={14} color="var(--text-secondary)" />}
+              </motion.button>
+
+              {/* Download */}
+              <motion.button
+                className="btn btn-primary"
+                whileHover={{ y: -1 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={handleDownload}
+                title="Download PDF"
+                style={{ padding: '5px 11px', fontSize: 12, gap: 5, borderRadius: 'var(--radius-sm)' }}
+              >
+                <Download size={13} /> Download
+              </motion.button>
+            </div>
+          </>
+        )}
       </motion.nav>
 
       {/* ── Main Workspace Body (Sidebar + Viewport) ── */}

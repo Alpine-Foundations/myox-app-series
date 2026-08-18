@@ -9,7 +9,7 @@ if ('serviceWorker' in navigator && import.meta.env.PROD) {
     navigator.serviceWorker
       .register('./sw.js')
       .then((reg) => {
-        console.log('✓ MyOxia Document PWA ServiceWorker registered with scope:', reg.scope);
+        console.log('✓ MyOx Document PWA ServiceWorker registered with scope:', reg.scope);
       })
       .catch((err) => {
         console.warn('PWA ServiceWorker registration failed:', err);

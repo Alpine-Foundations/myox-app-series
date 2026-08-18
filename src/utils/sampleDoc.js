@@ -27,16 +27,16 @@ export async function createDemoPDFDocument() {
     x: 48, y: 760, width: 499, height: 44,
     color: cFill, borderColor: cBorder, borderWidth: 1,
   });
-  page1.drawText('ALPINE DOCUMENT — USER MANUAL & SYSTEM GUIDE', {
-    x: 64, y: 778, size: 10, font: fontBold, color: cMuted,
+  page1.drawText('MYOX DOCUMENT — ALPINE FOUNDATIONS ENTERPRISE GUIDE', {
+    x: 64, y: 778, size: 9.5, font: fontBold, color: cMuted,
   });
 
   // Main Title
-  page1.drawText('Client-Side Document Workspace', {
-    x: 48, y: 715, size: 24, font: fontBold, color: cDark,
+  page1.drawText('Hardware-Accelerated Document Studio', {
+    x: 48, y: 715, size: 23, font: fontBold, color: cDark,
   });
-  page1.drawText('A private, hardware-accelerated PDF reader and annotation suite.', {
-    x: 48, y: 692, size: 12, font: fontRegular, color: cMuted,
+  page1.drawText('A private, 100% client-side PDF reader, markup suite and utility engine.', {
+    x: 48, y: 692, size: 11.5, font: fontRegular, color: cMuted,
   });
 
   // Section 1: Privacy & Processing Model
@@ -244,10 +244,10 @@ export async function createDemoPDFDocument() {
     x: 48, y: 275, size: 9.5, font: fontOblique, color: cMuted,
   });
 
-  page3.drawText('Page 3 of 3 — Alpine Document User Guide', {
+  page3.drawText('Page 3 of 3 — MyOx Document Guide by Alpine Foundations', {
     x: 48, y: 40, size: 9, font: fontRegular, color: cMuted,
   });
 
   const pdfBytes = await pdfDoc.save();
-  return new File([pdfBytes], 'Alpine_Document_User_Guide.pdf', { type: 'application/pdf' });
+  return new File([pdfBytes], 'MyOx_Document_Enterprise_Guide.pdf', { type: 'application/pdf' });
 }

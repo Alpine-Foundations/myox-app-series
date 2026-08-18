@@ -1,13 +1,13 @@
 {
-  "name": "MyOxia Document — Private PDF Studio",
-  "short_name": "MyOxia PDF",
-  "description": "Private, client-side PDF reader, annotation studio, e-sign, and document organizer with zero server uploads.",
+  "name": "MyOx Document — Alpine Foundations",
+  "short_name": "MyOx PDF",
+  "description": "Enterprise-grade, 100% client-side PDF reader, annotation studio, digital e-signature, and document organizer engineered by Alpine Foundations.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "any",
-  "background_color": "#09090b",
-  "theme_color": "#09090b",
+  "background_color": "#0a0b0e",
+  "theme_color": "#0a0b0e",
   "categories": ["productivity", "utilities", "business"],
   "icons": [
     {

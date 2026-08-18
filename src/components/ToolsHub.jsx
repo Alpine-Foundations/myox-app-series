@@ -154,13 +154,13 @@ const containerVariants = {
   show: {
     opacity: 1,
     transition: {
-      staggerChildren: 0.05,
+      staggerChildren: 0.04,
     },
   },
 };
 
 const cardVariants = {
-  hidden: { opacity: 0, y: 14, scale: 0.98 },
+  hidden: { opacity: 0, y: 12, scale: 0.98 },
   show: { opacity: 1, y: 0, scale: 1, transition: { type: 'spring', stiffness: 380, damping: 26 } },
 };
 
@@ -182,43 +182,48 @@ export default function ToolsHub({ onSelectTool }) {
 
   const categoryPills = [
     { id: 'all', label: 'All Tools' },
-    ...TOOLS_CATEGORIES.map(c => ({ id: c.id, label: c.title.split(' ')[0] + ' Tools' })),
+    ...TOOLS_CATEGORIES.map(c => ({ id: c.id, label: c.title.split(' ')[0] })),
   ];
 
   return (
-    <div style={{ width: '100%', maxWidth: 1040, margin: '0 auto', padding: '12px 0 60px' }}>
+    <div style={{ width: '100%', maxWidth: 1040, margin: '0 auto', padding: '8px 0 60px' }}>
       
       {/* ── Banner Header ── */}
       <motion.div 
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ type: 'spring', stiffness: 350, damping: 28 }}
-        style={{ textAlign: 'center', marginBottom: 28 }}
+        style={{ textAlign: 'center', marginBottom: 24 }}
       >
-        <h2 style={{ fontSize: 28, fontWeight: 800, letterSpacing: '-0.03em', color: 'var(--text-primary)' }}>
-          MyOxia PDF Studio Utilities
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '3px 10px', borderRadius: 99, background: 'var(--accent-soft)', marginBottom: 10 }}>
+          <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
+            Alpine Foundations Enterprise Suite
+          </span>
+        </div>
+        <h2 style={{ fontSize: 26, fontWeight: 800, letterSpacing: '-0.03em', color: 'var(--text-primary)' }}>
+          MyOx PDF Studio Utilities
         </h2>
-        <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 6, maxWidth: 480, margin: '6px auto 0', lineHeight: 1.5 }}>
-          GPU-accelerated tools running 100% in your browser with complete privacy.
+        <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 4, maxWidth: 460, margin: '4px auto 0', lineHeight: 1.5 }}>
+          Client-side GPU accelerated tools running 100% in local memory.
         </p>
 
-        {/* ── Search Bar & Filter Tabs ── */}
-        <div style={{ marginTop: 20, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
-          <div style={{ position: 'relative', width: '100%', maxWidth: 400 }}>
-            <Search size={15} color="var(--text-tertiary)" style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)' }} />
+        {/* ── Search Bar & Horizontal Swipeable Filter Tabs ── */}
+        <div style={{ marginTop: 18, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+          <div style={{ position: 'relative', width: '100%', maxWidth: 380 }}>
+            <Search size={14} color="var(--text-tertiary)" style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)' }} />
             <input
               type="text"
-              placeholder="Search tools (Merge, Split, E-Sign, Images)…"
+              placeholder="Search utilities (Merge, E-Sign, Split)…"
               value={search}
               onChange={e => setSearch(e.target.value)}
               style={{
                 width: '100%',
-                padding: '9px 14px 9px 38px',
+                padding: '8px 14px 8px 36px',
                 borderRadius: 'var(--radius-md)',
                 background: 'var(--surface-card)',
                 border: '1px solid var(--glass-border)',
                 color: 'var(--text-primary)',
-                fontSize: 13,
+                fontSize: 12.5,
                 outline: 'none',
                 boxShadow: 'var(--shadow-sm)',
               }}
@@ -229,16 +234,25 @@ export default function ToolsHub({ onSelectTool }) {
                 onClick={() => setSearch('')}
                 style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', padding: 3 }}
               >
-                <X size={13} color="var(--text-secondary)" />
+                <X size={12} color="var(--text-secondary)" />
               </button>
             )}
           </div>
 
-          {/* Category Tabs with Gliding Indicator */}
-          <div style={{
-            display: 'flex', flexWrap: 'wrap', gap: 4, justifyContent: 'center',
-            background: 'var(--bg-subtle)', padding: 3, borderRadius: 'var(--radius-md)',
-          }}>
+          {/* Swipeable Category Tabs (No Wrapping Overflow on Mobile) */}
+          <div 
+            className="no-scrollbar"
+            style={{
+              display: 'flex',
+              gap: 4,
+              overflowX: 'auto',
+              maxWidth: '100%',
+              padding: '3px 4px',
+              background: 'var(--bg-subtle)',
+              borderRadius: 'var(--radius-md)',
+              WebkitOverflowScrolling: 'touch',
+            }}
+          >
             {categoryPills.map(cat => {
               const isSelected = activeCategory === cat.id;
               return (
@@ -250,13 +264,15 @@ export default function ToolsHub({ onSelectTool }) {
                     position: 'relative',
                     padding: '5px 12px',
                     fontSize: 12,
-                    fontWeight: isSelected ? 600 : 500,
+                    fontWeight: isSelected ? 700 : 500,
                     color: isSelected ? 'var(--text-primary)' : 'var(--text-secondary)',
                     borderRadius: 'var(--radius-sm)',
                     border: 'none',
                     background: 'transparent',
                     cursor: 'pointer',
                     zIndex: 2,
+                    whiteSpace: 'nowrap',
+                    flexShrink: 0,
                     transition: 'color 0.15s ease',
                   }}
                 >
@@ -282,15 +298,15 @@ export default function ToolsHub({ onSelectTool }) {
         </div>
       </motion.div>
 
-      {/* ── Tools Grid with Staggered Animation ── */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
+      {/* ── Tools Grid with Fluid Responsive Columns ── */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
         {filteredCategories.map(category => (
           <div key={category.id}>
-            <div style={{ marginBottom: 12 }}>
-              <h3 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
+            <div style={{ marginBottom: 10 }}>
+              <h3 style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
                 {category.title}
               </h3>
-              <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>
+              <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 1 }}>
                 {category.description}
               </p>
             </div>
@@ -301,8 +317,8 @@ export default function ToolsHub({ onSelectTool }) {
               animate="show"
               style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
-                gap: 14,
+                gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 280px), 1fr))',
+                gap: 12,
               }}
             >
               {category.tools.map(tool => {
@@ -316,7 +332,7 @@ export default function ToolsHub({ onSelectTool }) {
                     onClick={() => onSelectTool(tool.id)}
                     className="glass-panel"
                     style={{
-                      padding: '18px',
+                      padding: '16px',
                       cursor: 'pointer',
                       display: 'flex',
                       flexDirection: 'column',
@@ -329,9 +345,9 @@ export default function ToolsHub({ onSelectTool }) {
                     }}
                   >
                     <div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
                         <div style={{
-                          width: 38, height: 38, borderRadius: 10,
+                          width: 36, height: 36, borderRadius: 10,
                           background: 'var(--accent-soft)',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                           color: 'var(--text-primary)',
@@ -339,8 +355,8 @@ export default function ToolsHub({ onSelectTool }) {
                           <IconComponent size={18} strokeWidth={1.75} />
                         </div>
                         <span style={{
-                          fontSize: 10, fontWeight: 600,
-                          padding: '2px 8px', borderRadius: 6,
+                          fontSize: 10, fontWeight: 700,
+                          padding: '2px 7px', borderRadius: 5,
                           background: 'var(--bg-subtle)',
                           color: 'var(--text-secondary)',
                           letterSpacing: '0.02em',
@@ -358,12 +374,12 @@ export default function ToolsHub({ onSelectTool }) {
                     </div>
 
                     <div style={{
-                      marginTop: 14, paddingTop: 10, borderTop: '1px solid var(--glass-border)',
+                      marginTop: 12, paddingTop: 10, borderTop: '1px solid var(--glass-border)',
                       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                       fontSize: 12, fontWeight: 600, color: 'var(--text-primary)',
                     }}>
                       <span>Launch Tool</span>
-                      <ArrowRight size={13} color="var(--text-tertiary)" />
+                      <ArrowRight size={12} color="var(--text-tertiary)" />
                     </div>
                   </motion.div>
                 );
