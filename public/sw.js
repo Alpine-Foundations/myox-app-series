@@ -1,4 +1,4 @@
-const CACHE_NAME = 'myox-document-v1';
+const CACHE_NAME = 'myox-document-v2';
 const STATIC_ASSETS = [
   './',
   './index.html',

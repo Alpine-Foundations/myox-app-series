@@ -1,27 +1,38 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" dir="ltr">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover" />
     
-    <!-- Primary Meta Tags & SEO -->
+    <!-- Primary Meta Tags & Search Engine Indexing -->
     <title>MyOx Document — Alpine Foundations | Private Hardware-Accelerated PDF Studio</title>
     <meta name="title" content="MyOx Document — Alpine Foundations | Private Hardware-Accelerated PDF Studio" />
     <meta name="description" content="State-of-the-art enterprise PDF studio engineered by Alpine Foundations. 100% client-side in-memory reader, annotation studio, vector e-signature, page organizer, and compression engine." />
-    <meta name="keywords" content="MyOx, Alpine Foundations, PDF reader, PDF editor, sign PDF, client-side PDF, e-sign signature, organize PDF, merge PDF, split PDF, compress PDF, watermark PDF, privacy PDF studio, PWA PDF app" />
+    <meta name="keywords" content="MyOx, Alpine Foundations, PDF reader, PDF editor, sign PDF, client-side PDF, e-sign signature, organize PDF, merge PDF, split PDF, compress PDF, watermark PDF, privacy PDF studio, PWA PDF app, PDF viewer online" />
     <meta name="author" content="Alpine Foundations" />
-    <meta name="robots" content="index, follow" />
+    <meta name="creator" content="Dikshant — Alpine Foundations" />
+    <meta name="publisher" content="Alpine Foundations" />
+    <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+    <meta name="googlebot" content="index, follow" />
     <link rel="canonical" href="https://alpine-foundations.github.io/myox-app-series/" />
 
-    <!-- Favicon & Brand Icons -->
+    <!-- Performance Resource Hints -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+    <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
+    <link rel="dns-prefetch" href="https://unpkg.com" />
+
+    <!-- Favicon & High-DPI Brand Icons -->
     <link rel="icon" type="image/png" sizes="32x32" href="./favicon.png" />
     <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="./icon-512.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png" />
     <link rel="shortcut icon" href="./favicon.png" />
 
     <!-- PWA & Mobile Web App Meta -->
     <link rel="manifest" href="./manifest.json" />
-    <meta name="theme-color" content="#0a0b0e" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#07080c" media="(prefers-color-scheme: dark)" />
     <meta name="theme-color" content="#f8f9fb" media="(prefers-color-scheme: light)" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -29,57 +40,82 @@
     <meta name="apple-mobile-web-app-title" content="MyOx PDF" />
     <meta name="format-detection" content="telephone=no" />
 
-    <!-- Open Graph / Facebook -->
+    <!-- Open Graph / Facebook / LinkedIn / WhatsApp -->
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://alpine-foundations.github.io/myox-app-series/" />
-    <meta property="og:title" content="MyOx Document — Alpine Foundations" />
-    <meta property="og:description" content="State-of-the-art enterprise PDF studio engineered by Alpine Foundations. 100% client-side with zero server uploads." />
-    <meta property="og:image" content="./logo.png" />
+    <meta property="og:title" content="MyOx Document — Alpine Foundations | Private PDF Studio" />
+    <meta property="og:description" content="Enterprise-grade PDF viewer, annotation studio, vector e-signatures, page organization, and zero-server-upload privacy by Alpine Foundations." />
+    <meta property="og:image" content="https://alpine-foundations.github.io/myox-app-series/logo.png" />
+    <meta property="og:image:width" content="512" />
+    <meta property="og:image:height" content="512" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:alt" content="MyOx Document by Alpine Foundations" />
     <meta property="og:site_name" content="MyOx Document | Alpine Foundations" />
+    <meta property="og:locale" content="en_US" />
 
-    <!-- Twitter -->
-    <meta property="twitter:card" content="summary_large_image" />
-    <meta property="twitter:url" content="https://alpine-foundations.github.io/myox-app-series/" />
-    <meta property="twitter:title" content="MyOx Document — Alpine Foundations" />
-    <meta property="twitter:description" content="State-of-the-art enterprise PDF studio engineered by Alpine Foundations. 100% client-side with zero server uploads." />
-    <meta property="twitter:image" content="./logo.png" />
+    <!-- Twitter / X Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:url" content="https://alpine-foundations.github.io/myox-app-series/" />
+    <meta name="twitter:title" content="MyOx Document — Alpine Foundations" />
+    <meta name="twitter:description" content="State-of-the-art enterprise PDF studio engineered by Alpine Foundations. 100% client-side with zero server uploads." />
+    <meta name="twitter:image" content="https://alpine-foundations.github.io/myox-app-series/logo.png" />
+    <meta name="twitter:image:alt" content="MyOx Document App Preview" />
 
-    <!-- Fonts Preconnect & Stylesheets -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Alex+Brush&family=Allura&family=Caveat:wght@500;700&family=Dancing+Script:wght@600;700&family=Great+Vibes&family=MonteCarlo&family=Parisienne&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sacramento&display=swap" rel="stylesheet">
+    <!-- Typography & Non-Blocking Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Alex+Brush&family=Allura&family=Caveat:wght@500;700&family=Dancing+Script:wght@600;700&family=Great+Vibes&family=MonteCarlo&family=Parisienne&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sacramento&display=swap" rel="stylesheet" />
 
-    <!-- JSON-LD Structured Data Schema -->
+    <!-- Comprehensive JSON-LD Structured Data Schema Graph -->
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
-      "@type": "SoftwareApplication",
-      "name": "MyOx Document",
-      "publisher": {
-        "@type": "Organization",
-        "name": "Alpine Foundations"
-      },
-      "applicationCategory": "ProductivityApplication",
-      "operatingSystem": "All modern browsers (Chrome, Safari, Firefox, Edge, iOS, Android)",
-      "offers": {
-        "@type": "Offer",
-        "price": "0",
-        "priceCurrency": "USD"
-      },
-      "description": "Enterprise-grade client-side PDF viewer and utility studio by Alpine Foundations with vector e-signatures, annotations, page reorganization, compression, and zero server uploads.",
-      "featureList": [
-        "100% Client-Side Processing & Zero Cloud Uploads",
-        "Interactive Annotation Studio with Shapes, Highlighters & Sticky Notes",
-        "Vector E-Signature Studio with Google Calligraphy & Stamp Seals",
-        "Visual Light-Table Page Organizer & Reordering",
-        "In-Memory Document Compression & Optimization",
-        "Book-Style Page Numbering & Reading Tone Shaders"
-      ],
-      "browserRequirements": "Requires WebAssembly and Canvas support."
+      "@graph": [
+        {
+          "@type": "SoftwareApplication",
+          "@id": "https://alpine-foundations.github.io/myox-app-series/#software",
+          "name": "MyOx Document",
+          "url": "https://alpine-foundations.github.io/myox-app-series/",
+          "publisher": {
+            "@type": "Organization",
+            "name": "Alpine Foundations",
+            "url": "https://alpine-foundations.github.io/myox-app-series/"
+          },
+          "applicationCategory": "ProductivityApplication",
+          "operatingSystem": "All modern browsers (Chrome, Safari, Firefox, Edge, iOS, Android)",
+          "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+          },
+          "description": "Enterprise-grade client-side PDF viewer and utility studio by Alpine Foundations with vector e-signatures, annotations, page reorganization, compression, and zero server uploads.",
+          "featureList": [
+            "100% Client-Side Processing & Zero Cloud Uploads",
+            "Interactive Annotation Studio with Shapes, Highlighters & Sticky Notes",
+            "Vector E-Signature Studio with Google Calligraphy & Stamp Seals",
+            "Visual Light-Table Page Organizer & Reordering",
+            "In-Memory Document Compression & Optimization",
+            "Save & Save As Workflow with File System Access API",
+            "Book-Style Page Numbering & Reading Tone Shaders"
+          ],
+          "browserRequirements": "Requires WebAssembly and Canvas support."
+        },
+        {
+          "@type": "WebSite",
+          "@id": "https://alpine-foundations.github.io/myox-app-series/#website",
+          "url": "https://alpine-foundations.github.io/myox-app-series/",
+          "name": "MyOx Document Studio",
+          "description": "Privacy-first in-memory PDF workspace engineered by Alpine Foundations."
+        }
+      ]
     }
     </script>
   </head>
   <body>
+    <noscript>
+      <div style="padding: 24px; text-align: center; font-family: sans-serif; color: #1e293b; background: #f8fafc;">
+        <h2>JavaScript Required</h2>
+        <p>MyOx Document requires JavaScript to process PDF files locally and securely in your browser memory.</p>
+      </div>
+    </noscript>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

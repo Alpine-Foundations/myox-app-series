@@ -1,6 +1,6 @@
 import {
   useState, useEffect, useRef, useCallback, useMemo, memo,
-  startTransition
+  startTransition, lazy, Suspense
 } from 'react';
 import { Document, Page, Outline, pdfjs } from 'react-pdf';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -16,16 +16,17 @@ import {
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 
-import SplitPDFTool from './components/tools/SplitPDFTool';
-import PageOrganizerModal from './components/tools/PageOrganizerModal';
-import WatermarkTool from './components/tools/WatermarkTool';
-import PageNumberingTool from './components/tools/PageNumberingTool';
-import PDFToImagesTool from './components/tools/PDFToImagesTool';
-import PDFSecurityModal from './components/tools/PDFSecurityModal';
-import CompressPDFTool from './components/tools/CompressPDFTool';
-import SharePDFModal from './components/tools/SharePDFModal';
-import SaveAsModal from './components/tools/SaveAsModal';
-import SignatureModal from './components/SignatureModal';
+// Lazy load secondary power tool modals to keep core reader bundle light
+const SplitPDFTool = lazy(() => import('./components/tools/SplitPDFTool'));
+const PageOrganizerModal = lazy(() => import('./components/tools/PageOrganizerModal'));
+const WatermarkTool = lazy(() => import('./components/tools/WatermarkTool'));
+const PageNumberingTool = lazy(() => import('./components/tools/PageNumberingTool'));
+const PDFToImagesTool = lazy(() => import('./components/tools/PDFToImagesTool'));
+const PDFSecurityModal = lazy(() => import('./components/tools/PDFSecurityModal'));
+const CompressPDFTool = lazy(() => import('./components/tools/CompressPDFTool'));
+const SharePDFModal = lazy(() => import('./components/tools/SharePDFModal'));
+const SaveAsModal = lazy(() => import('./components/tools/SaveAsModal'));
+const SignatureModal = lazy(() => import('./components/SignatureModal'));
 import PDFAnnotationOverlay from './components/PDFAnnotationOverlay';
 import { PDFDocument, rgb, degrees, StandardFonts } from 'pdf-lib';
 import { downloadFile, bakePDFWithModifications } from './utils/pdfEngine';
@@ -1001,96 +1002,98 @@ export default function PDFViewer({
       color: 'var(--text-primary)',
       overflow: 'hidden',
     }}>
-      {/* ── Active Tool Modals ── */}
-      <AnimatePresence>
-        {activeViewerTool === 'organize' && (
-          <PageOrganizerModal
-            initialFile={file}
-            currentAnnotations={annotations}
-            currentSignatures={placedSignatures}
-            onClose={() => setActiveViewerTool(null)}
-            onUpdateDocument={(newFile, meta) => {
-              recordSnapshot();
-              heightCache.current = {};
-              setFile(newFile);
-              if (meta?.updatedAnnotations) setAnnotations(meta.updatedAnnotations);
-              if (meta?.updatedSignatures) setPlacedSignatures(meta.updatedSignatures);
-              setActiveViewerTool(null);
-            }}
-          />
-        )}
-        {activeViewerTool === 'split' && (
-          <SplitPDFTool initialFile={file} onClose={() => setActiveViewerTool(null)} />
-        )}
-        {activeViewerTool === 'watermark' && (
-          <WatermarkTool
-            initialFile={file}
-            onClose={() => setActiveViewerTool(null)}
-            onUpdateDocument={(newFile) => {
-              recordSnapshot();
-              setFile(newFile);
-              setActiveViewerTool(null);
-            }}
-          />
-        )}
-        {activeViewerTool === 'numbering' && (
-          <PageNumberingTool
-            initialFile={file}
-            onClose={() => setActiveViewerTool(null)}
-            onUpdateDocument={(newFile) => {
-              recordSnapshot();
-              setFile(newFile);
-              setActiveViewerTool(null);
-            }}
-          />
-        )}
-        {activeViewerTool === 'compress' && (
-          <CompressPDFTool
-            initialFile={file}
-            onClose={() => setActiveViewerTool(null)}
-            onUpdateDocument={(newFile) => {
-              recordSnapshot();
-              setFile(newFile);
-              setActiveViewerTool(null);
-            }}
-          />
-        )}
-        {activeViewerTool === 'share' && (
-          <SharePDFModal file={file} onClose={() => setActiveViewerTool(null)} />
-        )}
-        {activeViewerTool === 'pdf-to-img' && (
-          <PDFToImagesTool initialFile={file} onClose={() => setActiveViewerTool(null)} />
-        )}
-        {activeViewerTool === 'sanitize' && (
-          <PDFSecurityModal
-            initialFile={file}
-            onClose={() => setActiveViewerTool(null)}
-            onUpdateDocument={(newFile) => {
-              recordSnapshot();
-              setFile(newFile);
-              setActiveViewerTool(null);
-            }}
-          />
-        )}
-        {activeViewerTool === 'signature' && (
-          <SignatureModal
-            onSaveSignature={(dataUrl) => {
-              setPendingSignature(dataUrl);
-              setActiveViewerTool(null);
-            }}
-            onClose={() => setActiveViewerTool(null)}
-          />
-        )}
-        {showSaveAsModal && (
-          <SaveAsModal
-            currentFileName={customDocName}
-            numPages={numPages || 1}
-            hasModifications={hasUnsavedChanges || placedSignatures.length > 0 || annotations.length > 0 || rotation !== 0}
-            onSave={handleSaveAsModalSubmit}
-            onClose={() => setShowSaveAsModal(false)}
-          />
-        )}
-      </AnimatePresence>
+      {/* ── Active Tool Modals with Suspense ── */}
+      <Suspense fallback={null}>
+        <AnimatePresence>
+          {activeViewerTool === 'organize' && (
+            <PageOrganizerModal
+              initialFile={file}
+              currentAnnotations={annotations}
+              currentSignatures={placedSignatures}
+              onClose={() => setActiveViewerTool(null)}
+              onUpdateDocument={(newFile, meta) => {
+                recordSnapshot();
+                heightCache.current = {};
+                setFile(newFile);
+                if (meta?.updatedAnnotations) setAnnotations(meta.updatedAnnotations);
+                if (meta?.updatedSignatures) setPlacedSignatures(meta.updatedSignatures);
+                setActiveViewerTool(null);
+              }}
+            />
+          )}
+          {activeViewerTool === 'split' && (
+            <SplitPDFTool initialFile={file} onClose={() => setActiveViewerTool(null)} />
+          )}
+          {activeViewerTool === 'watermark' && (
+            <WatermarkTool
+              initialFile={file}
+              onClose={() => setActiveViewerTool(null)}
+              onUpdateDocument={(newFile) => {
+                recordSnapshot();
+                setFile(newFile);
+                setActiveViewerTool(null);
+              }}
+            />
+          )}
+          {activeViewerTool === 'numbering' && (
+            <PageNumberingTool
+              initialFile={file}
+              onClose={() => setActiveViewerTool(null)}
+              onUpdateDocument={(newFile) => {
+                recordSnapshot();
+                setFile(newFile);
+                setActiveViewerTool(null);
+              }}
+            />
+          )}
+          {activeViewerTool === 'compress' && (
+            <CompressPDFTool
+              initialFile={file}
+              onClose={() => setActiveViewerTool(null)}
+              onUpdateDocument={(newFile) => {
+                recordSnapshot();
+                setFile(newFile);
+                setActiveViewerTool(null);
+              }}
+            />
+          )}
+          {activeViewerTool === 'share' && (
+            <SharePDFModal file={file} onClose={() => setActiveViewerTool(null)} />
+          )}
+          {activeViewerTool === 'pdf-to-img' && (
+            <PDFToImagesTool initialFile={file} onClose={() => setActiveViewerTool(null)} />
+          )}
+          {activeViewerTool === 'sanitize' && (
+            <PDFSecurityModal
+              initialFile={file}
+              onClose={() => setActiveViewerTool(null)}
+              onUpdateDocument={(newFile) => {
+                recordSnapshot();
+                setFile(newFile);
+                setActiveViewerTool(null);
+              }}
+            />
+          )}
+          {activeViewerTool === 'signature' && (
+            <SignatureModal
+              onSaveSignature={(dataUrl) => {
+                setPendingSignature(dataUrl);
+                setActiveViewerTool(null);
+              }}
+              onClose={() => setActiveViewerTool(null)}
+            />
+          )}
+          {showSaveAsModal && (
+            <SaveAsModal
+              currentFileName={customDocName}
+              numPages={numPages || 1}
+              hasModifications={hasUnsavedChanges || placedSignatures.length > 0 || annotations.length > 0 || rotation !== 0}
+              onSave={handleSaveAsModalSubmit}
+              onClose={() => setShowSaveAsModal(false)}
+            />
+          )}
+        </AnimatePresence>
+      </Suspense>
 
       {/* ── Save Toast Feedback ── */}
       <AnimatePresence>

@@ -1,26 +1,42 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   UploadCloud, File, Moon, Sun, Clock, Trash2,
   Wand2, BookOpen, Sparkles, ArrowRight, ShieldCheck, DownloadCloud,
   Layers, PenTool, Files, LayoutGrid, CheckCircle2, ChevronRight, X
 } from 'lucide-react';
-import PDFViewer from './PDFViewer';
-import ToolsHub from './components/ToolsHub';
-import DeveloperPage from './components/DeveloperPage';
-import MergePDFTool from './components/tools/MergePDFTool';
-import SplitPDFTool from './components/tools/SplitPDFTool';
-import PageOrganizerModal from './components/tools/PageOrganizerModal';
-import WatermarkTool from './components/tools/WatermarkTool';
-import PageNumberingTool from './components/tools/PageNumberingTool';
-import ImagesToPDFTool from './components/tools/ImagesToPDFTool';
-import PDFToImagesTool from './components/tools/PDFToImagesTool';
-import PDFSecurityModal from './components/tools/PDFSecurityModal';
-import CompressPDFTool from './components/tools/CompressPDFTool';
-import GoogleDrivePickerModal from './components/tools/GoogleDrivePickerModal';
-import SharePDFModal from './components/tools/SharePDFModal';
 import { createDemoPDFDocument } from './utils/sampleDoc';
 import './index.css';
+
+// Lazy-loaded components for optimal initial payload & near-instant TTI
+const PDFViewer = lazy(() => import('./PDFViewer'));
+const ToolsHub = lazy(() => import('./components/ToolsHub'));
+const DeveloperPage = lazy(() => import('./components/DeveloperPage'));
+const MergePDFTool = lazy(() => import('./components/tools/MergePDFTool'));
+const SplitPDFTool = lazy(() => import('./components/tools/SplitPDFTool'));
+const PageOrganizerModal = lazy(() => import('./components/tools/PageOrganizerModal'));
+const WatermarkTool = lazy(() => import('./components/tools/WatermarkTool'));
+const PageNumberingTool = lazy(() => import('./components/tools/PageNumberingTool'));
+const ImagesToPDFTool = lazy(() => import('./components/tools/ImagesToPDFTool'));
+const PDFToImagesTool = lazy(() => import('./components/tools/PDFToImagesTool'));
+const PDFSecurityModal = lazy(() => import('./components/tools/PDFSecurityModal'));
+const CompressPDFTool = lazy(() => import('./components/tools/CompressPDFTool'));
+const GoogleDrivePickerModal = lazy(() => import('./components/tools/GoogleDrivePickerModal'));
+const SharePDFModal = lazy(() => import('./components/tools/SharePDFModal'));
+
+const FallbackLoader = () => (
+  <div style={{
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    width: '100%', minHeight: 180, padding: 30,
+  }}>
+    <div style={{
+      width: 28, height: 28, borderRadius: '50%',
+      border: '2.5px solid var(--glass-border)',
+      borderTopColor: 'var(--accent)',
+      animation: 'spin 0.75s linear infinite',
+    }} />
+  </div>
+);
 
 function formatBytes(bytes, decimals = 1) {
   if (!+bytes) return '0 B';
@@ -184,18 +200,20 @@ export default function App() {
 
   if (file) {
     return (
-      <PDFViewer
-        file={file}
-        theme={theme}
-        onToggleTheme={toggleTheme}
-        initialTool={initialViewerTool}
-        initialAnnotate={initialAnnotate}
-        onClose={() => {
-          setFile(null);
-          setInitialViewerTool(null);
-          setInitialAnnotate(false);
-        }}
-      />
+      <Suspense fallback={<FallbackLoader />}>
+        <PDFViewer
+          file={file}
+          theme={theme}
+          onToggleTheme={toggleTheme}
+          initialTool={initialViewerTool}
+          initialAnnotate={initialAnnotate}
+          onClose={() => {
+            setFile(null);
+            setInitialViewerTool(null);
+            setInitialAnnotate(false);
+          }}
+        />
+      </Suspense>
     );
   }
 
@@ -242,30 +260,32 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      {/* ── Active Tool Modals ── */}
-      <AnimatePresence>
-        {activeTool === 'merge' && <MergePDFTool onClose={() => setActiveTool(null)} />}
-        {activeTool === 'split' && <SplitPDFTool onClose={() => setActiveTool(null)} />}
-        {activeTool === 'organize' && <PageOrganizerModal onClose={() => setActiveTool(null)} />}
-        {activeTool === 'watermark' && <WatermarkTool onClose={() => setActiveTool(null)} />}
-        {activeTool === 'numbering' && <PageNumberingTool onClose={() => setActiveTool(null)} />}
-        {activeTool === 'img-to-pdf' && <ImagesToPDFTool onClose={() => setActiveTool(null)} />}
-        {activeTool === 'pdf-to-img' && <PDFToImagesTool onClose={() => setActiveTool(null)} />}
-        {activeTool === 'compress' && <CompressPDFTool onClose={() => setActiveTool(null)} />}
-        {activeTool === 'gdrive' && (
-          <GoogleDrivePickerModal
-            onImportFile={(importedFile) => {
-              handleOpenPdf(importedFile);
-              setActiveTool(null);
-            }}
-            onClose={() => setActiveTool(null)}
-          />
-        )}
-        {activeTool === 'share' && <SharePDFModal file={file} onClose={() => setActiveTool(null)} />}
-        {(activeTool === 'protect' || activeTool === 'sanitize') && (
-          <PDFSecurityModal onClose={() => setActiveTool(null)} />
-        )}
-      </AnimatePresence>
+      {/* ── Active Tool Modals with Suspense ── */}
+      <Suspense fallback={<FallbackLoader />}>
+        <AnimatePresence>
+          {activeTool === 'merge' && <MergePDFTool onClose={() => setActiveTool(null)} />}
+          {activeTool === 'split' && <SplitPDFTool onClose={() => setActiveTool(null)} />}
+          {activeTool === 'organize' && <PageOrganizerModal onClose={() => setActiveTool(null)} />}
+          {activeTool === 'watermark' && <WatermarkTool onClose={() => setActiveTool(null)} />}
+          {activeTool === 'numbering' && <PageNumberingTool onClose={() => setActiveTool(null)} />}
+          {activeTool === 'img-to-pdf' && <ImagesToPDFTool onClose={() => setActiveTool(null)} />}
+          {activeTool === 'pdf-to-img' && <PDFToImagesTool onClose={() => setActiveTool(null)} />}
+          {activeTool === 'compress' && <CompressPDFTool onClose={() => setActiveTool(null)} />}
+          {activeTool === 'gdrive' && (
+            <GoogleDrivePickerModal
+              onImportFile={(importedFile) => {
+                handleOpenPdf(importedFile);
+                setActiveTool(null);
+              }}
+              onClose={() => setActiveTool(null)}
+            />
+          )}
+          {activeTool === 'share' && <SharePDFModal file={file} onClose={() => setActiveTool(null)} />}
+          {(activeTool === 'protect' || activeTool === 'sanitize') && (
+            <PDFSecurityModal onClose={() => setActiveTool(null)} />
+          )}
+        </AnimatePresence>
+      </Suspense>
 
       {/* ── Top Floating Navigation Dock (Zero Overflow Responsive Design) ── */}
       <nav className="glass-panel" style={{ 
@@ -618,7 +638,9 @@ export default function App() {
               transition={{ type: 'spring', stiffness: 360, damping: 28 }}
               style={{ width: '100%', maxWidth: 1040, paddingBottom: 60 }}
             >
-              <ToolsHub onSelectTool={handleSelectToolFromHub} />
+              <Suspense fallback={<FallbackLoader />}>
+                <ToolsHub onSelectTool={handleSelectToolFromHub} />
+              </Suspense>
             </motion.div>
           )}
 
@@ -631,12 +653,14 @@ export default function App() {
               transition={{ type: 'spring', stiffness: 360, damping: 28 }}
               style={{ width: '100%', maxWidth: 920, paddingBottom: 60 }}
             >
-              <DeveloperPage
-                pwaPrompt={pwaPrompt}
-                onInstallPWA={handleInstallPWA}
-                onBackToViewer={() => setActiveTab('reader')}
-                onOpenUtilities={() => setActiveTab('tools')}
-              />
+              <Suspense fallback={<FallbackLoader />}>
+                <DeveloperPage
+                  pwaPrompt={pwaPrompt}
+                  onInstallPWA={handleInstallPWA}
+                  onBackToViewer={() => setActiveTab('reader')}
+                  onOpenUtilities={() => setActiveTab('tools')}
+                />
+              </Suspense>
             </motion.div>
           )}
         </AnimatePresence>
