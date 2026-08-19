@@ -327,10 +327,11 @@ export default function ToolsHub({ onSelectTool }) {
                   <motion.div
                     key={tool.id}
                     variants={cardVariants}
-                    whileHover={{ y: -3, scale: 1.015 }}
+                    whileHover={{ y: -4, scale: 1.018 }}
                     whileTap={{ scale: 0.98 }}
+                    transition={{ type: 'spring', stiffness: 420, damping: 24 }}
                     onClick={() => onSelectTool(tool.id)}
-                    className="glass-panel"
+                    className="glass-panel shimmer-container hover-lift"
                     style={{
                       padding: '18px',
                       cursor: 'pointer',

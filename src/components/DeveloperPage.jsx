@@ -1,12 +1,97 @@
-import { motion } from 'framer-motion';
+import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Sparkles, Globe, Smartphone, Monitor, ShieldCheck,
-  ArrowLeft, Terminal, Cpu, Layers, ExternalLink, Heart
+  Sparkles, ShieldCheck, ArrowLeft, Layers, Share2,
+  DownloadCloud, Copy, Check, Mail, MessageCircle,
+  ExternalLink, Smartphone, Monitor, Info
 } from 'lucide-react';
 import devPhoto from '../assets/about-dev.jfif';
 import logoImg from '../assets/myox-logo.png';
 
-export default function DeveloperPage({ onBackToViewer, onOpenUtilities }) {
+export default function DeveloperPage({
+  onBackToViewer,
+  onOpenUtilities,
+  pwaPrompt,
+  onInstallPWA,
+}) {
+  const [copiedLink, setCopiedLink] = useState(false);
+  const [showInstallGuide, setShowInstallGuide] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+
+  const showToast = (msg) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(''), 2800);
+  };
+
+  const appUrl = typeof window !== 'undefined'
+    ? (window.location.origin + window.location.pathname)
+    : 'https://alpine-foundations.github.io/myox-app-series/';
+
+  const shareTitle = 'MyOx Document — Private Hardware-Accelerated PDF Studio';
+  const shareText = 'Check out MyOx Document — a fast, free, 100% client-side private PDF studio engineered by Alpine Foundations. Zero cloud uploads!';
+
+  const handleNativeShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: shareTitle,
+          text: shareText,
+          url: appUrl,
+        });
+        showToast('Shared successfully!');
+      } catch (err) {
+        if (err.name !== 'AbortError') {
+          handleCopyShareLink();
+        }
+      }
+    } else {
+      handleCopyShareLink();
+    }
+  };
+
+  const handleCopyShareLink = () => {
+    navigator.clipboard.writeText(appUrl);
+    setCopiedLink(true);
+    showToast('App link copied to clipboard!');
+    setTimeout(() => setCopiedLink(false), 2400);
+  };
+
+  const handleWhatsAppShare = () => {
+    const text = encodeURIComponent(`${shareText}\n\n${appUrl}`);
+    window.open(`https://api.whatsapp.com/send?text=${text}`, '_blank');
+  };
+
+  const handleTwitterShare = () => {
+    const text = encodeURIComponent(shareText);
+    const url = encodeURIComponent(appUrl);
+    window.open(`https://twitter.com/intent/tweet?text=${text}&url=${url}`, '_blank');
+  };
+
+  const handleLinkedInShare = () => {
+    const url = encodeURIComponent(appUrl);
+    window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${url}`, '_blank');
+  };
+
+  const handleTelegramShare = () => {
+    const text = encodeURIComponent(shareText);
+    const url = encodeURIComponent(appUrl);
+    window.open(`https://t.me/share/url?url=${url}&text=${text}`, '_blank');
+  };
+
+  const handleEmailShare = () => {
+    const subject = encodeURIComponent(shareTitle);
+    const body = encodeURIComponent(`Hi,\n\nI recommend checking out MyOx Document, a 100% private in-browser PDF studio:\n${appUrl}\n\nBest regards.`);
+    window.open(`mailto:?subject=${subject}&body=${body}`, '_blank');
+  };
+
+  const handleTriggerInstall = () => {
+    if (pwaPrompt && onInstallPWA) {
+      onInstallPWA();
+    } else {
+      setShowInstallGuide(v => !v);
+    }
+  };
+
   return (
     <div style={{
       width: '100%',
@@ -20,6 +105,26 @@ export default function DeveloperPage({ onBackToViewer, onOpenUtilities }) {
       minHeight: 'calc(100vh - 120px)',
     }}>
       
+      {/* ── Subtle Toast ── */}
+      <AnimatePresence>
+        {toastMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: -16, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -16, scale: 0.96 }}
+            transition={{ type: 'spring', stiffness: 450, damping: 32 }}
+            style={{
+              position: 'fixed', top: 20, left: '50%', transform: 'translateX(-50%)',
+              zIndex: 999, background: 'var(--accent)', color: 'var(--bg-color)',
+              padding: '8px 20px', borderRadius: 99, fontSize: 13, fontWeight: 600,
+              boxShadow: 'var(--shadow-lg)', maxWidth: '90vw', textAlign: 'center',
+            }}
+          >
+            {toastMessage}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* ── Fixed / Atmospheric Watermark Brand Background ── */}
       <motion.div
         initial={{ opacity: 0, scale: 0.92 }}
@@ -97,8 +202,8 @@ export default function DeveloperPage({ onBackToViewer, onOpenUtilities }) {
         >
           <span style={{
             width: 7, height: 7, borderRadius: '50%',
-            background: 'var(--accent)',
-            boxShadow: '0 0 8px var(--accent)',
+            background: 'var(--accent-emerald)',
+            boxShadow: '0 0 8px var(--accent-emerald)',
             display: 'inline-block',
           }} />
           <span style={{
@@ -147,7 +252,7 @@ export default function DeveloperPage({ onBackToViewer, onOpenUtilities }) {
           background: 'var(--surface-card)',
           backdropFilter: 'blur(28px)',
           WebkitBackdropFilter: 'blur(28px)',
-          boxShadow: '0 24px 70px rgba(0, 0, 0, 0.12), 0 4px 16px rgba(0, 0, 0, 0.04)',
+          boxShadow: 'var(--shadow-xl)',
           position: 'relative',
           zIndex: 1,
           overflow: 'hidden',
@@ -222,14 +327,14 @@ export default function DeveloperPage({ onBackToViewer, onOpenUtilities }) {
               height: 26,
               borderRadius: '50%',
               background: 'var(--accent)',
-              color: '#ffffff',
+              color: 'var(--bg-color)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               border: '2px solid var(--surface-card)',
               boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
               zIndex: 2,
-            }}>
+            }} title="Founder & Lead Architect">
               <ShieldCheck size={14} strokeWidth={2.5} />
             </div>
           </motion.div>
@@ -295,7 +400,7 @@ export default function DeveloperPage({ onBackToViewer, onOpenUtilities }) {
         </div>
       </motion.div>
 
-      {/* ── Lower Section: Multi-Platform Ecosystem Vision ── */}
+      {/* ── Interactive Features: Share App & Install App ── */}
       <motion.div
         initial={{ opacity: 0, y: 22 }}
         animate={{ opacity: 1, y: 0 }}
@@ -304,131 +409,263 @@ export default function DeveloperPage({ onBackToViewer, onOpenUtilities }) {
           width: '100%',
           maxWidth: 780,
           marginTop: 28,
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+          gap: 16,
           position: 'relative',
           zIndex: 1,
         }}
       >
-        <span style={{
-          fontSize: 11.5,
-          fontWeight: 700,
-          color: 'var(--text-tertiary)',
-          textTransform: 'uppercase',
-          letterSpacing: '0.06em',
-          display: 'block',
-          textAlign: 'center',
-          marginBottom: 14,
-        }}>
-          Multi-Platform Architectural Roadmap
-        </span>
-
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-          gap: 12,
-        }}>
-          {/* Platform 1: Web */}
-          <div
-            className="glass-panel"
-            style={{
-              padding: '16px 18px',
-              borderRadius: 'var(--radius-lg)',
-              background: 'var(--surface-card)',
-              border: '1px solid var(--glass-border)',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 8,
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        {/* ── Card 1: Share App Feature ── */}
+        <div
+          className="glass-panel shimmer-container hover-lift"
+          style={{
+            padding: '22px 20px',
+            borderRadius: 'var(--radius-xl)',
+            background: 'var(--surface-card)',
+            border: '1px solid var(--glass-border)',
+            boxShadow: 'var(--shadow-md)',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+            gap: 16,
+            position: 'relative',
+            overflow: 'hidden',
+          }}
+        >
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
               <div style={{
-                width: 32, height: 32, borderRadius: 8,
+                width: 38, height: 38, borderRadius: 10,
                 background: 'var(--accent-soft)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: 'var(--accent)',
+                color: 'var(--text-primary)',
+                border: '1px solid var(--glass-border)',
               }}>
-                <Globe size={16} />
+                <Share2 size={19} />
               </div>
               <span style={{
-                fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 99,
-                background: 'rgba(52, 199, 89, 0.15)', color: '#34c759',
-              }}>
-                Live Architecture
-              </span>
-            </div>
-            <h3 style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>Web Engine (PWA)</h3>
-            <p style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-              Zero-server client-side WASM & WebGL acceleration running 100% in local browser memory.
-            </p>
-          </div>
-
-          {/* Platform 2: Android */}
-          <div
-            className="glass-panel"
-            style={{
-              padding: '16px 18px',
-              borderRadius: 'var(--radius-lg)',
-              background: 'var(--surface-card)',
-              border: '1px solid var(--glass-border)',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 8,
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{
-                width: 32, height: 32, borderRadius: 8,
-                background: 'rgba(52, 199, 89, 0.12)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: '#34c759',
-              }}>
-                <Smartphone size={16} />
-              </div>
-              <span style={{
-                fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 99,
-                background: 'var(--accent-soft)', color: 'var(--accent)',
-              }}>
-                Android Expansion
-              </span>
-            </div>
-            <h3 style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>Android Mobile</h3>
-            <p style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-              Native touch ergonomics, system-level file handles, and synchronized offline storage.
-            </p>
-          </div>
-
-          {/* Platform 3: Desktop */}
-          <div
-            className="glass-panel"
-            style={{
-              padding: '16px 18px',
-              borderRadius: 'var(--radius-lg)',
-              background: 'var(--surface-card)',
-              border: '1px solid var(--glass-border)',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 8,
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{
-                width: 32, height: 32, borderRadius: 8,
-                background: 'rgba(88, 86, 214, 0.12)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: '#5856d6',
-              }}>
-                <Monitor size={16} />
-              </div>
-              <span style={{
-                fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 99,
+                fontSize: 10.5, fontWeight: 700, padding: '3px 9px', borderRadius: 99,
                 background: 'var(--accent-soft)', color: 'var(--text-secondary)',
+                letterSpacing: '0.04em', textTransform: 'uppercase',
               }}>
-                Desktop Workspace
+                Community & Teams
               </span>
             </div>
-            <h3 style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>Cross-Platform Desktop</h3>
-            <p style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-              High-throughput batch tools, native multi-windowing, and unified device workflows.
+
+            <h3 style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 6, letterSpacing: '-0.02em' }}>
+              Share MyOx Studio
+            </h3>
+            <p style={{ fontSize: 12.5, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+              Recommend MyOx to colleagues, friends, or teams who need a private, zero-server-upload PDF workspace.
             </p>
+          </div>
+
+          {/* Share Action Buttons */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {/* Primary Native / Direct Share Button */}
+            <motion.button
+              className="btn btn-primary"
+              whileHover={{ y: -1 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={handleNativeShare}
+              style={{
+                width: '100%',
+                padding: '10px 14px',
+                fontSize: 13,
+                fontWeight: 700,
+                borderRadius: 'var(--radius-sm)',
+                gap: 8,
+                boxShadow: 'var(--shadow-sm)',
+              }}
+            >
+              <Share2 size={15} />
+              <span>Share Application</span>
+            </motion.button>
+
+            {/* Quick Social Channels Grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 6 }}>
+              {[
+                { name: 'WhatsApp', icon: MessageCircle, action: handleWhatsAppShare, color: '#25D366' },
+                { name: 'X / Twitter', icon: ExternalLink, action: handleTwitterShare, color: 'var(--text-primary)' },
+                { name: 'Telegram', icon: Sparkles, action: handleTelegramShare, color: '#0088cc' },
+                { name: 'LinkedIn', icon: Layers, action: handleLinkedInShare, color: '#0A66C2' },
+                { name: 'Email', icon: Mail, action: handleEmailShare, color: 'var(--text-primary)' },
+              ].map((item, idx) => {
+                const IconComp = item.icon;
+                return (
+                  <motion.button
+                    key={idx}
+                    whileHover={{ scale: 1.06, y: -1 }}
+                    whileTap={{ scale: 0.94 }}
+                    onClick={item.action}
+                    className="btn"
+                    title={`Share via ${item.name}`}
+                    style={{
+                      padding: '8px 0',
+                      borderRadius: 'var(--radius-sm)',
+                      background: 'var(--bg-subtle)',
+                      border: '1px solid var(--glass-border)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 2,
+                    }}
+                  >
+                    <IconComp size={14} color={item.color} />
+                    <span style={{ fontSize: 9.5, fontWeight: 600, color: 'var(--text-tertiary)' }}>
+                      {item.name.split(' ')[0]}
+                    </span>
+                  </motion.button>
+                );
+              })}
+            </div>
+
+            {/* Copy Link Button */}
+            <motion.button
+              whileHover={{ y: -1 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={handleCopyShareLink}
+              className="btn btn-soft"
+              style={{
+                width: '100%',
+                padding: '7px 12px',
+                fontSize: 12,
+                borderRadius: 'var(--radius-sm)',
+                gap: 6,
+                fontWeight: 600,
+              }}
+            >
+              {copiedLink ? <Check size={14} color="var(--accent-emerald)" /> : <Copy size={14} />}
+              <span>{copiedLink ? 'App Link Copied to Clipboard!' : 'Copy Direct App Link'}</span>
+            </motion.button>
+          </div>
+        </div>
+
+        {/* ── Card 2: Install App Feature ── */}
+        <div
+          className="glass-panel shimmer-container hover-lift"
+          style={{
+            padding: '22px 20px',
+            borderRadius: 'var(--radius-xl)',
+            background: 'var(--surface-card)',
+            border: '1px solid var(--glass-border)',
+            boxShadow: 'var(--shadow-md)',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+            gap: 16,
+            position: 'relative',
+            overflow: 'hidden',
+          }}
+        >
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+              <div style={{
+                width: 38, height: 38, borderRadius: 10,
+                background: 'var(--accent-soft)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: 'var(--text-primary)',
+                border: '1px solid var(--glass-border)',
+              }}>
+                <DownloadCloud size={19} />
+              </div>
+              <span style={{
+                fontSize: 10.5, fontWeight: 700, padding: '3px 9px', borderRadius: 99,
+                background: 'rgba(52, 199, 89, 0.14)', color: 'var(--accent-emerald)',
+                letterSpacing: '0.04em', textTransform: 'uppercase',
+              }}>
+                PWA Standalone
+              </span>
+            </div>
+
+            <h3 style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 6, letterSpacing: '-0.02em' }}>
+              Install MyOx App
+            </h3>
+            <p style={{ fontSize: 12.5, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+              Experience MyOx as a dedicated, hardware-accelerated app with full offline capabilities and zero install latency.
+            </p>
+          </div>
+
+          {/* Feature Badge Highlights */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {[
+              '⚡ Instant Launch',
+              '🔒 100% Offline Capable',
+              '🖥️ Standalone Window',
+              '📱 Mobile & Desktop',
+            ].map((tag, idx) => (
+              <span
+                key={idx}
+                style={{
+                  fontSize: 11,
+                  fontWeight: 600,
+                  padding: '3px 8px',
+                  borderRadius: 6,
+                  background: 'var(--bg-subtle)',
+                  color: 'var(--text-secondary)',
+                  border: '1px solid var(--glass-border)',
+                }}
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
+
+          {/* Beautiful Install Trigger Button */}
+          <div>
+            <motion.button
+              className="btn btn-primary"
+              whileHover={{ scale: 1.01, y: -1 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={handleTriggerInstall}
+              style={{
+                width: '100%',
+                padding: '11px 16px',
+                fontSize: 13.5,
+                fontWeight: 700,
+                borderRadius: 'var(--radius-sm)',
+                gap: 8,
+                boxShadow: 'var(--shadow-sm)',
+                background: 'var(--accent)',
+                color: 'var(--bg-color)',
+              }}
+            >
+              <DownloadCloud size={16} />
+              <span>{pwaPrompt ? 'Install MyOx App' : 'Install / Add to Device'}</span>
+            </motion.button>
+
+            {/* Expandable Platform Guidance */}
+            <AnimatePresence>
+              {showInstallGuide && !pwaPrompt && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  style={{
+                    marginTop: 10,
+                    padding: '10px 12px',
+                    borderRadius: 'var(--radius-sm)',
+                    background: 'var(--bg-subtle)',
+                    border: '1px solid var(--glass-border)',
+                    fontSize: 11.5,
+                    color: 'var(--text-secondary)',
+                    lineHeight: 1.5,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 6,
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontWeight: 700, color: 'var(--text-primary)' }}>
+                    <Info size={13} /> How to install in your browser:
+                  </div>
+                  <div>• <strong>Chrome / Edge (Desktop & Mobile):</strong> Click the <strong>Install</strong> icon in the address bar or browser menu (⋮).</div>
+                  <div>• <strong>Safari (iOS / iPadOS):</strong> Tap the <strong>Share button</strong> ⎋ and choose <strong>"Add to Home Screen"</strong>.</div>
+                  <div>• <strong>Already installed?</strong> You can launch MyOx directly from your home screen or application launcher.</div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
       </motion.div>

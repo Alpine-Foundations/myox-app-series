@@ -358,7 +358,7 @@ export default function App() {
           })}
         </div>
 
-        {/* Right Actions: PWA Install + Sample Guide + Theme Toggle */}
+        {/* Right Actions: PWA Install + Theme Toggle */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
           {pwaPrompt && (
             <motion.button
@@ -373,21 +373,6 @@ export default function App() {
               <DownloadCloud size={12} /> Install
             </motion.button>
           )}
-
-          <motion.button
-            className="btn btn-soft"
-            onClick={() => handleOpenDemoDoc()}
-            whileHover={{ y: -1 }}
-            whileTap={{ scale: 0.96 }}
-            style={{
-              padding: '5px 11px', fontSize: 12, borderRadius: 'var(--radius-sm)',
-              fontWeight: 600, gap: 5,
-            }}
-          >
-            <Sparkles size={12} />
-            <span className="desktop-only">Sample Guide</span>
-            <span className="mobile-only">Guide</span>
-          </motion.button>
 
           <motion.button
             className="btn"
@@ -436,15 +421,15 @@ export default function App() {
                 paddingBottom: 32,
               }}
             >
-              {/* ── Elevated Focal Dropzone ── */}
+              {/* ── Elevated Focal Dropzone with Shimmer & Spring Dynamics ── */}
               <motion.div
-                whileHover={{ y: -2 }}
-                whileTap={{ scale: 0.995 }}
-                transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-                className="glass-panel"
+                whileHover={{ y: -3, scale: 1.008 }}
+                whileTap={{ scale: 0.992 }}
+                transition={{ type: 'spring', stiffness: 380, damping: 26 }}
+                className="glass-panel shimmer-container"
                 style={{
                   width: '100%',
-                  padding: '38px 24px',
+                  padding: '40px 24px',
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
@@ -453,7 +438,7 @@ export default function App() {
                   backgroundColor: isDragging ? 'var(--accent-soft)' : 'var(--glass-bg)',
                   cursor: 'pointer',
                   borderRadius: 'var(--radius-xl)',
-                  transition: 'border-color 0.2s ease, background-color 0.2s ease',
+                  transition: 'border-color 0.22s ease, background-color 0.22s ease, box-shadow 0.22s ease',
                   boxShadow: isDragging ? '0 0 0 4px var(--accent-soft), var(--shadow-xl)' : 'var(--shadow-lg)',
                   position: 'relative',
                   overflow: 'hidden',
@@ -470,10 +455,11 @@ export default function App() {
                 
                 {/* Glowing Concentric Upload Core */}
                 <motion.div 
-                  animate={{ scale: isDragging ? 1.15 : 1, y: isDragging ? -4 : 0 }}
-                  transition={{ type: 'spring', damping: 18 }}
+                  className="pulse-aura"
+                  animate={{ scale: isDragging ? 1.18 : 1, y: isDragging ? -5 : 0 }}
+                  transition={{ type: 'spring', damping: 16, stiffness: 300 }}
                   style={{
-                    width: 58, height: 58, borderRadius: 18,
+                    width: 62, height: 62, borderRadius: 20,
                     background: 'var(--accent-soft)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     marginBottom: 16,
@@ -481,10 +467,10 @@ export default function App() {
                     boxShadow: 'var(--shadow-sm)',
                   }}
                 >
-                  <UploadCloud size={28} color="var(--text-primary)" strokeWidth={1.8} />
+                  <UploadCloud size={30} color="var(--text-primary)" strokeWidth={1.8} />
                 </motion.div>
                 
-                <h2 style={{ fontSize: 18.5, fontWeight: 700, letterSpacing: '-0.025em', color: 'var(--text-primary)', textAlign: 'center' }}>
+                <h2 style={{ fontSize: 19, fontWeight: 700, letterSpacing: '-0.025em', color: 'var(--text-primary)', textAlign: 'center' }}>
                   {isDragging ? 'Release to open document' : 'Open a PDF document'}
                 </h2>
                 <p style={{ marginTop: 6, color: 'var(--text-secondary)', fontSize: 13, textAlign: 'center', lineHeight: 1.5, maxWidth: 380 }}>
@@ -492,10 +478,17 @@ export default function App() {
                 </p>
 
                 {/* Quick Interactive Tool Launchers inside Drop Area */}
-                <div style={{
-                  display: 'flex', flexWrap: 'wrap', gap: 6, justifyContent: 'center',
-                  marginTop: 20, maxWidth: 440,
-                }}>
+                <motion.div 
+                  initial="hidden"
+                  animate="visible"
+                  variants={{
+                    visible: { transition: { staggerChildren: 0.06 } }
+                  }}
+                  style={{
+                    display: 'flex', flexWrap: 'wrap', gap: 6, justifyContent: 'center',
+                    marginTop: 20, maxWidth: 440,
+                  }}
+                >
                   {[
                     { label: 'Sample Guide', icon: Sparkles, action: () => handleOpenDemoDoc() },
                     { label: 'Sign PDF', icon: PenTool, action: () => handleOpenDemoDoc('signature') },
@@ -506,12 +499,18 @@ export default function App() {
                     return (
                       <motion.div
                         key={idx}
-                        whileHover={{ scale: 1.03, y: -1 }}
-                        whileTap={{ scale: 0.97 }}
+                        variants={{
+                          hidden: { opacity: 0, y: 8, scale: 0.94 },
+                          visible: { opacity: 1, y: 0, scale: 1 }
+                        }}
+                        whileHover={{ scale: 1.05, y: -2 }}
+                        whileTap={{ scale: 0.96 }}
+                        transition={{ type: 'spring', stiffness: 450, damping: 24 }}
                         onClick={(e) => {
                           e.stopPropagation();
                           chip.action();
                         }}
+                        className="hover-lift"
                         style={{
                           padding: '6px 12px',
                           borderRadius: 'var(--radius-sm)',
@@ -528,7 +527,7 @@ export default function App() {
                       </motion.div>
                     );
                   })}
-                </div>
+                </motion.div>
                 
                 {/* Security Trust Anchor */}
                 <div style={{ marginTop: 22, display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--text-tertiary)', textAlign: 'center' }}>
@@ -633,6 +632,8 @@ export default function App() {
               style={{ width: '100%', maxWidth: 920, paddingBottom: 60 }}
             >
               <DeveloperPage
+                pwaPrompt={pwaPrompt}
+                onInstallPWA={handleInstallPWA}
                 onBackToViewer={() => setActiveTab('reader')}
                 onOpenUtilities={() => setActiveTab('tools')}
               />

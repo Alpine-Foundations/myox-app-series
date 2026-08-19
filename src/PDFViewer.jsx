@@ -10,7 +10,8 @@ import {
   Printer, BookOpen, Copy, Check, Sparkles, Wand2, LayoutGrid,
   Scissors, Stamp, Hash, FileImage, ShieldAlert, PenTool, CheckCircle,
   Undo2, Redo2, Pencil, MessageSquare, Square, Circle, ArrowUpRight,
-  Highlighter, Share2, Minimize2, Palette, Trash2, Edit3, Sliders, Type, CheckSquare, Eye
+  Highlighter, Share2, Minimize2, Palette, Trash2, Edit3, Sliders, Type, CheckSquare, Eye,
+  Save, FileDown
 } from 'lucide-react';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
@@ -23,10 +24,11 @@ import PDFToImagesTool from './components/tools/PDFToImagesTool';
 import PDFSecurityModal from './components/tools/PDFSecurityModal';
 import CompressPDFTool from './components/tools/CompressPDFTool';
 import SharePDFModal from './components/tools/SharePDFModal';
+import SaveAsModal from './components/tools/SaveAsModal';
 import SignatureModal from './components/SignatureModal';
 import PDFAnnotationOverlay from './components/PDFAnnotationOverlay';
 import { PDFDocument, rgb, degrees, StandardFonts } from 'pdf-lib';
-import { downloadFile } from './utils/pdfEngine';
+import { downloadFile, bakePDFWithModifications } from './utils/pdfEngine';
 
 pdfjs.GlobalWorkerOptions.workerSrc =
   `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
@@ -328,6 +330,13 @@ export default function PDFViewer({
   const [pendingSignature, setPendingSignature] = useState(null);
   const [placedSignatures, setPlacedSignatures] = useState([]);
 
+  // Save / Save As state
+  const [fileHandle,        setFileHandle]        = useState(null);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [showSaveAsModal,   setShowSaveAsModal]   = useState(false);
+  const [isSaving,          setIsSaving]          = useState(false);
+  const [saveToast,         setSaveToast]         = useState('');
+
   // Annotation Studio State
   const [isAnnotateMode,     setIsAnnotateMode]     = useState(initialAnnotate);
   const [activeAnnotateTool, setActiveAnnotateTool] = useState(initialAnnotate ? 'pen' : null); // 'pen' | 'highlighter' | 'text' | 'comment' | 'rect' | 'circle' | 'arrow'
@@ -385,6 +394,7 @@ export default function PDFViewer({
 
   // Record history snapshot helper
   const recordSnapshot = useCallback(() => {
+    setHasUnsavedChanges(true);
     setHistory(prev => [
       ...prev.slice(-25), // keep up to 25 history states
       {
@@ -419,6 +429,7 @@ export default function PDFViewer({
     setPlacedSignatures(lastState.placedSignatures);
     setAnnotations(lastState.annotations);
     setRotation(lastState.rotation);
+    setHasUnsavedChanges(true);
   }, [history, file, customDocName, placedSignatures, annotations, rotation]);
 
   const handleRedo = useCallback(() => {
@@ -442,20 +453,24 @@ export default function PDFViewer({
     setPlacedSignatures(nextState.placedSignatures);
     setAnnotations(nextState.annotations);
     setRotation(nextState.rotation);
+    setHasUnsavedChanges(true);
   }, [future, file, customDocName, placedSignatures, annotations, rotation]);
 
   // Annotations management with history recording
   const handleAddAnnotation = useCallback((newAnn) => {
     recordSnapshot();
+    setHasUnsavedChanges(true);
     setAnnotations(prev => [...prev, newAnn]);
   }, [recordSnapshot]);
 
   const handleUpdateAnnotation = useCallback((id, patch) => {
+    setHasUnsavedChanges(true);
     setAnnotations(prev => prev.map(a => a.id === id ? { ...a, ...patch } : a));
   }, []);
 
   const handleDeleteAnnotation = useCallback((id) => {
     recordSnapshot();
+    setHasUnsavedChanges(true);
     setAnnotations(prev => prev.filter(a => a.id !== id));
   }, [recordSnapshot]);
 
@@ -703,10 +718,141 @@ export default function PDFViewer({
     }
   }, []);
 
-  // Keyboard shortcuts (including Ctrl+Z for Undo, Ctrl+Y for Redo, Ctrl+F for Search)
+  // Ephemeral toast feedback helper
+  const showSaveToast = useCallback((msg) => {
+    setSaveToast(msg);
+    setTimeout(() => setSaveToast(''), 3000);
+  }, []);
+
+  // Fit to Width zoom helper
+  const fitToWidth = useCallback(() => {
+    setScale(1.0);
+  }, []);
+
+  // Quick Save handler (Ctrl+S / Save button)
+  const handleSave = useCallback(async () => {
+    if (!file) return;
+    setIsSaving(true);
+
+    try {
+      const bakedBytes = await bakePDFWithModifications(file, {
+        placedSignatures,
+        annotations,
+        rotation,
+        pageWidth,
+      });
+
+      // Write directly to fileHandle if available from File System Access API
+      if (fileHandle && typeof fileHandle.createWritable === 'function') {
+        try {
+          const writable = await fileHandle.createWritable();
+          await writable.write(bakedBytes);
+          await writable.close();
+          setHasUnsavedChanges(false);
+          showSaveToast(`✓ Saved to "${fileHandle.name || customDocName}"`);
+          setIsSaving(false);
+          return;
+        } catch (handleErr) {
+          console.warn('File handle write failed, falling back to download:', handleErr);
+        }
+      }
+
+      // Default Save: export with current document name
+      const saveName = customDocName || file.name || 'document.pdf';
+      downloadFile(bakedBytes, saveName);
+      setHasUnsavedChanges(false);
+      showSaveToast(`✓ Saved "${saveName}" successfully!`);
+    } catch (err) {
+      console.error('Save failed:', err);
+      showSaveToast('Failed to save document.');
+    } finally {
+      setIsSaving(false);
+    }
+  }, [file, fileHandle, placedSignatures, annotations, rotation, pageWidth, customDocName, showSaveToast]);
+
+  // Save As handler (Ctrl+Shift+S / Save As button)
+  const handleSaveAsTrigger = useCallback(async () => {
+    if (!file) return;
+
+    // Check if File System Access API is supported
+    if (typeof window !== 'undefined' && 'showSaveFilePicker' in window) {
+      try {
+        const initialName = customDocName.endsWith('.pdf') ? customDocName : `${customDocName}.pdf`;
+        const handle = await window.showSaveFilePicker({
+          suggestedName: initialName,
+          types: [{
+            description: 'PDF Document (*.pdf)',
+            accept: { 'application/pdf': ['.pdf'] },
+          }],
+        });
+
+        setIsSaving(true);
+        const bakedBytes = await bakePDFWithModifications(file, {
+          placedSignatures,
+          annotations,
+          rotation,
+          pageWidth,
+        });
+
+        const writable = await handle.createWritable();
+        await writable.write(bakedBytes);
+        await writable.close();
+
+        setFileHandle(handle);
+        setCustomDocName(handle.name);
+        setHasUnsavedChanges(false);
+        showSaveToast(`✓ Saved as "${handle.name}"`);
+        setIsSaving(false);
+        return;
+      } catch (err) {
+        if (err.name === 'AbortError') {
+          return; // User cancelled file picker
+        }
+        console.warn('showSaveFilePicker error, falling back to modal:', err);
+      }
+    }
+
+    // Fallback: Open Save As Modal
+    setShowSaveAsModal(true);
+  }, [file, customDocName, placedSignatures, annotations, rotation, pageWidth, showSaveToast]);
+
+  // Handle Save As modal submission
+  const handleSaveAsModalSubmit = useCallback(async ({ fileName, includeModifications, sanitizeMetadata, compressDocument }) => {
+    if (!file) return;
+
+    const bakedBytes = await bakePDFWithModifications(file, {
+      placedSignatures: includeModifications ? placedSignatures : [],
+      annotations: includeModifications ? annotations : [],
+      rotation: includeModifications ? rotation : 0,
+      sanitizeMetadata,
+      compressDocument,
+      pageWidth,
+    });
+
+    downloadFile(bakedBytes, fileName);
+    setCustomDocName(fileName);
+    setHasUnsavedChanges(false);
+    showSaveToast(`✓ Saved as "${fileName}" successfully!`);
+  }, [file, placedSignatures, annotations, rotation, pageWidth, showSaveToast]);
+
+  // Backward-compatible alias for Download button
+  const handleDownload = handleSave;
+
+  // Keyboard shortcuts (including Ctrl+S for Save, Ctrl+Shift+S for Save As, Ctrl+Z, Ctrl+Y, Ctrl+F)
   useEffect(() => {
     const onKey = (e) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+
+      // Save (Ctrl+S) and Save As (Ctrl+Shift+S)
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        if (e.shiftKey) {
+          handleSaveAsTrigger();
+        } else {
+          handleSave();
+        }
+        return;
+      }
 
       // Undo / Redo
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
@@ -770,191 +916,7 @@ export default function PDFViewer({
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [scrollToPage, zoomIn, zoomOut, rotate, handleUndo, handleRedo]);
-
-  // Download File handler baking signatures and annotations
-  const handleDownload = useCallback(async () => {
-    if (!file) return;
-
-    if (placedSignatures.length > 0 || annotations.length > 0) {
-      try {
-        const fileBuffer = await file.arrayBuffer();
-        const pdfDoc = await PDFDocument.load(fileBuffer, { ignoreEncryption: true });
-        const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-        const fontRegular = await pdfDoc.embedFont(StandardFonts.Helvetica);
-        const pages = pdfDoc.getPages();
-
-        // 1. Bake digital signatures
-        for (const sig of placedSignatures) {
-          const targetPage = pages[sig.pageNumber - 1];
-          if (!targetPage) continue;
-
-          const base64Data = sig.dataUrl.split(',')[1];
-          const binaryString = atob(base64Data);
-          const sigBytes = new Uint8Array(binaryString.length);
-          for (let i = 0; i < binaryString.length; i++) {
-            sigBytes[i] = binaryString.charCodeAt(i);
-          }
-
-          const embeddedSig = await pdfDoc.embedPng(sigBytes);
-          const { width: pageW, height: pageH } = targetPage.getSize();
-
-          const normX = sig.normX !== undefined ? sig.normX : (sig.x / (pageWidth || 600));
-          const normY = sig.normY !== undefined ? sig.normY : (sig.y / ((pageWidth || 600) * DEFAULT_AR));
-          const sigW = Math.min(pageW * 0.35, 140 * (pageW / 600));
-          const sigH = (sigW * (embeddedSig.height / embeddedSig.width));
-
-          const sigX = normX * pageW;
-          const sigY = pageH - (normY * pageH) - sigH;
-
-          targetPage.drawImage(embeddedSig, {
-            x: Math.max(0, sigX),
-            y: Math.max(0, sigY),
-            width: sigW,
-            height: sigH,
-          });
-        }
-
-        // 2. Bake Annotations per page (Text blocks, Shapes, Freehand Drawings)
-        for (let pIdx = 0; pIdx < pages.length; pIdx++) {
-          const pageNum = pIdx + 1;
-          const targetPage = pages[pIdx];
-          const { width: pageW, height: pageH } = targetPage.getSize();
-          const pageAnns = annotations.filter(a => a.pageNumber === pageNum);
-          if (pageAnns.length === 0) continue;
-
-          // Text blocks
-          for (const ann of pageAnns) {
-            if (ann.type === 'text' && ann.content) {
-              const normX = ann.normX !== undefined ? ann.normX : (ann.x / (pageWidth || 600));
-              const normY = ann.normY !== undefined ? ann.normY : (ann.y / ((pageWidth || 600) * DEFAULT_AR));
-              const fontSizePts = (ann.fontSize || 15) * (pageW / 600);
-
-              const hex = (ann.color || '#18181b').replace('#', '');
-              const r = parseInt(hex.substring(0, 2), 16) / 255 || 0;
-              const g = parseInt(hex.substring(2, 4), 16) / 255 || 0;
-              const b = parseInt(hex.substring(4, 6), 16) / 255 || 0;
-
-              targetPage.drawText(ann.content, {
-                x: Math.max(0, normX * pageW),
-                y: Math.max(0, pageH - (normY * pageH) - fontSizePts),
-                size: fontSizePts,
-                font: ann.isBold ? fontBold : fontRegular,
-                color: rgb(r, g, b),
-              });
-            }
-          }
-
-          // Rasterize Freehand Strokes & Shapes to a crisp 2x DPI canvas overlay
-          const nonTextAnns = pageAnns.filter(a => a.type === 'draw' || a.type === 'shape');
-          if (nonTextAnns.length > 0) {
-            const bakeCanvas = document.createElement('canvas');
-            const dpr = 2;
-            bakeCanvas.width = Math.round(pageW * dpr);
-            bakeCanvas.height = Math.round(pageH * dpr);
-            const bCtx = bakeCanvas.getContext('2d');
-            bCtx.scale(dpr, dpr);
-
-            for (const item of nonTextAnns) {
-              if (item.type === 'draw' && item.points && item.points.length > 1) {
-                bCtx.save();
-                bCtx.globalAlpha = item.opacity || 1.0;
-                bCtx.strokeStyle = item.color || '#2563eb';
-                bCtx.lineWidth = (item.strokeWidth || 3) * (pageW / 600);
-                bCtx.lineCap = 'round';
-                bCtx.lineJoin = 'round';
-                bCtx.beginPath();
-                const p0 = item.points[0];
-                const sx = (p0.normX !== undefined ? p0.normX * pageW : p0.x * (pageW / 600));
-                const sy = (p0.normY !== undefined ? p0.normY * pageH : p0.y * (pageH / 800));
-                bCtx.moveTo(sx, sy);
-                for (let i = 1; i < item.points.length; i++) {
-                  const pt = item.points[i];
-                  const px = (pt.normX !== undefined ? pt.normX * pageW : pt.x * (pageW / 600));
-                  const py = (pt.normY !== undefined ? pt.normY * pageH : pt.y * (pageH / 800));
-                  bCtx.lineTo(px, py);
-                }
-                bCtx.stroke();
-                bCtx.restore();
-              } else if (item.type === 'shape') {
-                const sX = (item.normX !== undefined ? item.normX * pageW : item.x * (pageW / 600));
-                const sY = (item.normY !== undefined ? item.normY * pageH : item.y * (pageH / 800));
-                const sW = (item.normWidth !== undefined ? item.normWidth * pageW : (item.width || 120) * (pageW / 600));
-                const sH = (item.normHeight !== undefined ? item.normHeight * pageH : (item.height || 60) * (pageH / 800));
-
-                bCtx.save();
-                bCtx.globalAlpha = item.opacity || 1.0;
-                bCtx.strokeStyle = item.color || '#2563eb';
-                bCtx.lineWidth = (item.strokeWidth || 3) * (pageW / 600);
-
-                if (item.shapeType === 'rect') {
-                  bCtx.strokeRect(sX, sY, sW, sH);
-                  bCtx.fillStyle = item.color || '#2563eb';
-                  bCtx.globalAlpha = (item.opacity || 1.0) * 0.1;
-                  bCtx.fillRect(sX, sY, sW, sH);
-                } else if (item.shapeType === 'circle') {
-                  bCtx.beginPath();
-                  bCtx.ellipse(sX + sW / 2, sY + sH / 2, sW / 2, sH / 2, 0, 0, Math.PI * 2);
-                  bCtx.stroke();
-                  bCtx.fillStyle = item.color || '#2563eb';
-                  bCtx.globalAlpha = (item.opacity || 1.0) * 0.1;
-                  bCtx.fill();
-                } else if (item.shapeType === 'arrow') {
-                  bCtx.beginPath();
-                  bCtx.moveTo(sX + 10, sY + sH - 10);
-                  bCtx.lineTo(sX + sW - 10, sY + 10);
-                  bCtx.stroke();
-                  const angle = Math.atan2(10 - (sY + sH - 10), (sX + sW - 10) - (sX + 10));
-                  const headLen = 14;
-                  bCtx.beginPath();
-                  bCtx.moveTo(sX + sW - 10, sY + 10);
-                  bCtx.lineTo(sX + sW - 10 - headLen * Math.cos(angle - Math.PI / 6), sY + 10 - headLen * Math.sin(angle - Math.PI / 6));
-                  bCtx.lineTo(sX + sW - 10 - headLen * Math.cos(angle + Math.PI / 6), sY + 10 - headLen * Math.sin(angle + Math.PI / 6));
-                  bCtx.closePath();
-                  bCtx.fillStyle = item.color || '#2563eb';
-                  bCtx.fill();
-                } else if (item.shapeType === 'line') {
-                  bCtx.beginPath();
-                  bCtx.moveTo(sX, sY + sH / 2);
-                  bCtx.lineTo(sX + sW, sY + sH / 2);
-                  bCtx.stroke();
-                }
-                bCtx.restore();
-              }
-            }
-
-            const pngBlob = await new Promise(res => bakeCanvas.toBlob(res, 'image/png'));
-            const pngBuf = await pngBlob.arrayBuffer();
-            const embeddedOverlay = await pdfDoc.embedPng(new Uint8Array(pngBuf));
-            targetPage.drawImage(embeddedOverlay, {
-              x: 0,
-              y: 0,
-              width: pageW,
-              height: pageH,
-            });
-          }
-        }
-
-        const signedBytes = await pdfDoc.save();
-        const exportName = customDocName || file.name || 'document.pdf';
-        downloadFile(signedBytes, exportName.startsWith('annotated_') ? exportName : `annotated_${exportName}`);
-        return;
-      } catch (err) {
-        console.error('Error baking annotations into PDF:', err);
-      }
-    }
-
-    const url = typeof file === 'string' ? file : URL.createObjectURL(file);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = customDocName || file.name || 'document.pdf';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    if (typeof file !== 'string') {
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
-    }
-  }, [file, customDocName, placedSignatures, annotations, pageWidth]);
+  }, [scrollToPage, zoomIn, zoomOut, rotate, handleUndo, handleRedo, handleSave, handleSaveAsTrigger]);
 
   // Copy selected text
   const handleCopySelection = useCallback(() => {
@@ -1118,6 +1080,36 @@ export default function PDFViewer({
             }}
             onClose={() => setActiveViewerTool(null)}
           />
+        )}
+        {showSaveAsModal && (
+          <SaveAsModal
+            currentFileName={customDocName}
+            numPages={numPages || 1}
+            hasModifications={hasUnsavedChanges || placedSignatures.length > 0 || annotations.length > 0 || rotation !== 0}
+            onSave={handleSaveAsModalSubmit}
+            onClose={() => setShowSaveAsModal(false)}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* ── Save Toast Feedback ── */}
+      <AnimatePresence>
+        {saveToast && (
+          <motion.div
+            initial={{ opacity: 0, y: -16, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -16, scale: 0.96 }}
+            transition={{ type: 'spring', stiffness: 450, damping: 32 }}
+            style={{
+              position: 'fixed', top: 20, left: '50%', transform: 'translateX(-50%)',
+              zIndex: 999, background: 'var(--accent)', color: 'var(--bg-color)',
+              padding: '8px 20px', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 7,
+              fontSize: 13, fontWeight: 600, boxShadow: 'var(--shadow-lg)', maxWidth: '90vw',
+            }}
+          >
+            <Check size={15} />
+            <span>{saveToast}</span>
+          </motion.div>
         )}
       </AnimatePresence>
 
@@ -1427,12 +1419,25 @@ export default function PDFViewer({
 
               <motion.button
                 className="btn btn-primary"
-                onClick={handleDownload}
+                onClick={handleSave}
                 whileTap={{ scale: 0.95 }}
-                title="Download PDF"
-                style={{ padding: '4px 8px', borderRadius: 'var(--radius-sm)', gap: 3, fontSize: 11.5 }}
+                title="Save PDF (Ctrl+S)"
+                style={{ padding: '4px 8px', borderRadius: 'var(--radius-sm)', gap: 3, fontSize: 11.5, position: 'relative' }}
               >
-                <Download size={12} />
+                <Save size={12} />
+                {hasUnsavedChanges && (
+                  <span
+                    style={{
+                      width: 5,
+                      height: 5,
+                      borderRadius: '50%',
+                      background: '#38bdf8',
+                      position: 'absolute',
+                      top: 2,
+                      right: 2,
+                    }}
+                  />
+                )}
               </motion.button>
             </div>
           </>
@@ -1703,6 +1708,7 @@ export default function PDFViewer({
                       }}
                     >
                       {[
+                        { id: 'save-as', label: 'Save As…', icon: FileDown, color: '#2563eb', action: handleSaveAsTrigger },
                         { id: 'compress', label: 'Compress PDF', icon: Minimize2, color: '#0d9488' },
                         { id: 'organize', label: 'Organize Pages', icon: LayoutGrid, color: '#059669' },
                         { id: 'split', label: 'Split / Extract', icon: Scissors, color: '#dc2626' },
@@ -1719,7 +1725,14 @@ export default function PDFViewer({
                             key={item.id}
                             whileHover={{ x: 2 }}
                             className="btn"
-                            onClick={() => { setActiveViewerTool(item.id); setShowToolsMenu(false); }}
+                            onClick={() => {
+                              if (item.action) {
+                                item.action();
+                              } else {
+                                setActiveViewerTool(item.id);
+                              }
+                              setShowToolsMenu(false);
+                            }}
                             style={{
                               justifyContent: 'flex-start', padding: '7px 10px', fontSize: 12, gap: 8,
                               borderRadius: 'var(--radius-sm)',
@@ -1786,17 +1799,59 @@ export default function PDFViewer({
                 {isFullscreen ? <Minimize size={14} color="var(--text-secondary)" /> : <Maximize size={14} color="var(--text-secondary)" />}
               </motion.button>
 
-              {/* Download */}
-              <motion.button
-                className="btn btn-primary"
-                whileHover={{ y: -1 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={handleDownload}
-                title="Download PDF"
-                style={{ padding: '5px 11px', fontSize: 12, gap: 5, borderRadius: 'var(--radius-sm)' }}
-              >
-                <Download size={13} /> Download
-              </motion.button>
+              {/* Save & Save As Button Group */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                <motion.button
+                  className="btn btn-primary"
+                  whileHover={{ y: -1 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={handleSave}
+                  title="Quick Save Document (Ctrl+S)"
+                  disabled={isSaving}
+                  style={{
+                    padding: '5px 12px',
+                    fontSize: 12,
+                    gap: 5,
+                    borderRadius: 'var(--radius-sm)',
+                    position: 'relative',
+                  }}
+                >
+                  <Save size={13} />
+                  <span>{isSaving ? 'Saving…' : 'Save'}</span>
+                  {hasUnsavedChanges && (
+                    <span
+                      title="Unsaved modifications"
+                      style={{
+                        width: 6,
+                        height: 6,
+                        borderRadius: '50%',
+                        background: '#38bdf8',
+                        position: 'absolute',
+                        top: 3,
+                        right: 3,
+                        boxShadow: '0 0 6px #38bdf8',
+                      }}
+                    />
+                  )}
+                </motion.button>
+
+                <motion.button
+                  className="btn btn-soft"
+                  whileHover={{ y: -1 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={handleSaveAsTrigger}
+                  title="Save As / Export with custom name & options (Ctrl+Shift+S)"
+                  style={{
+                    padding: '5px 9px',
+                    fontSize: 12,
+                    gap: 4,
+                    borderRadius: 'var(--radius-sm)',
+                  }}
+                >
+                  <FileDown size={13} />
+                  <span>Save As…</span>
+                </motion.button>
+              </div>
             </div>
           </>
         )}
@@ -2272,6 +2327,29 @@ export default function PDFViewer({
               {/* Content List */}
               <div style={{ padding: '14px 16px', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: 14 }}>
                 
+                {/* Save & Export Controls */}
+                <div>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 6 }}>
+                    Document Save & Export
+                  </span>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                    <button
+                      className="btn btn-primary"
+                      onClick={() => { setShowToolsMenu(false); handleSave(); }}
+                      style={{ padding: '10px 12px', fontSize: 12.5, justifyContent: 'center', gap: 6 }}
+                    >
+                      <Save size={14} /> Quick Save
+                    </button>
+                    <button
+                      className="btn btn-soft"
+                      onClick={() => { setShowToolsMenu(false); handleSaveAsTrigger(); }}
+                      style={{ padding: '10px 12px', fontSize: 12.5, justifyContent: 'center', gap: 6 }}
+                    >
+                      <FileDown size={14} /> Save As…
+                    </button>
+                  </div>
+                </div>
+
                 {/* Display & Orientation Controls */}
                 <div>
                   <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 6 }}>
